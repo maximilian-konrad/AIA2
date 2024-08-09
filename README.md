@@ -1,5 +1,4 @@
-# Automated-Image-Analysis
-Automated Image Analysis (AIA)
+# Automated-Image-Analysis (AIA)
 
 This repository contains the code and data for the AIA2 project. The goal of the project is to create a simple Image Analytics Pipeline that can be used in future research.
 
