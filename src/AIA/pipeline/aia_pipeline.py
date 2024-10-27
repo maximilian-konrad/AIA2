@@ -8,6 +8,9 @@ import pandas as pd  # Data manipulation and analysis
 
 # Project-specific imports
 from ..core.basic_img_features import extract_basic_image_features  # Function to extract basic features from images
+from ..core.nima_neural_image_assessment import neural_image_assessment  # Function to extract NIMA neural image assessment
+from ..core.blur_detection import extract_blur_value # Function to extract blur value
+from ..core.noise_detection import estimate_noise # Function to extract noise value
 
 
 class AIA:
@@ -61,7 +64,14 @@ class AIA:
         # Extract basic image features (e.g., color histograms, entropy) and add them to the features dictionary
         features.update(extract_basic_image_features(image_path))
 
-        # TODO: Implement additional image processing steps, if needed
+        # Extract NIMA score
+        features.update(neural_image_assessment(image_path))
+        
+        # Extract Blur value
+        features.update(extract_blur_value(image_path))
+
+        # Extract Noise value
+        features.update(estimate_noise(image_path))
 
         return features  # Return the dictionary of extracted features
     
