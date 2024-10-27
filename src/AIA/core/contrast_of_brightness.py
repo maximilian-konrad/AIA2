@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 def calculate_contrast_of_brightness(image_path):
+    features = {}
     # Load the image
     image = cv2.imread(image_path)
     if image is None:
@@ -16,11 +17,6 @@ def calculate_contrast_of_brightness(image_path):
     # Calculate the standard deviation of pixel intensity (contrast of brightness)
     contrast_of_brightness = np.std(intensity_values)
     
-    return contrast_of_brightness
+    features['Contrast of Brightness'] = contrast_of_brightness
 
-# Example usage
-image_path = '2.jpg'  # Replace with your image path
-contrast = calculate_contrast_of_brightness(image_path)
-print(f"Contrast of Brightness: {contrast}")
-
-
+    return features

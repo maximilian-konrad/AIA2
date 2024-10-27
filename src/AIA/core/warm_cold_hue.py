@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 def calculate_hue_proportions(image_path):
+    features = {}
     # Load the image
     image = cv2.imread(image_path)
     if image is None:
@@ -32,13 +33,7 @@ def calculate_hue_proportions(image_path):
     else:
         cold_to_warm_ratio = cold_pixel_count / warm_pixel_count
     
-    return warm_to_cold_ratio, cold_to_warm_ratio
+    features['Warm Hues'] = warm_to_cold_ratio
+    features['Cold Hues'] = cold_to_warm_ratio
 
-# Example usage
-image_path = '2.jpg'  # Replace with your image path
-warm_to_cold, cold_to_warm = calculate_hue_proportions(image_path)
-print(f"Proportion of Warm to Cold Hue Pixels: {warm_to_cold}")
-print(f"Proportion of Cold to Warm Hue Pixels: {cold_to_warm}")
-
-
-
+    return features

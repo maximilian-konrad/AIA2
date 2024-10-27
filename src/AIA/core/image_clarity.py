@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 def calculate_image_clarity(image_path):
+    features = {}
     # Load the image
     image = cv2.imread(image_path)
     if image is None:
@@ -19,9 +20,6 @@ def calculate_image_clarity(image_path):
     clarity_mask = (brightness_values >= 0.7) & (brightness_values <= 1.0)
     clarity_score = np.sum(clarity_mask) / brightness_values.size  # Proportion of high-brightness pixels
     
-    return clarity_score
+    features['Image Clarity'] = clarity_score
 
-# Example usage
-image_path = '10.jpg'  # Replace with your image path
-clarity = calculate_image_clarity(image_path)
-print(f"Image Clarity: {clarity}")
+    return features
