@@ -11,7 +11,9 @@ from ..core.basic_img_features import extract_basic_image_features  # Function t
 from ..core.nima_neural_image_assessment import neural_image_assessment  # Function to extract NIMA neural image assessment
 from ..core.blur_detection import extract_blur_value # Function to extract blur value
 from ..core.noise_detection import estimate_noise # Function to extract noise value
-
+from ..core.contrast_of_brightness import calculate_contrast_of_brightness # Function to calculate contrast of brightness
+from ..core.image_clarity import calculate_image_clarity # Function to calculate image clarity
+from ..core.warm_cold_hue import calculate_hue_proportions # Function to calculate warm hue proportion and cold hue proportion
 
 class AIA:
     """
@@ -72,6 +74,15 @@ class AIA:
 
         # Extract Noise value
         features.update(estimate_noise(image_path))
+
+        # Extract Contrast of Brightness value
+        features.update(calculate_contrast_of_brightness(image_path))
+
+        # Extract Image Clarity value
+        features.update(calculate_image_clarity(image_path))
+
+        # Extract Warm hue and Cold hue values
+        features.update(calculate_hue_proportions(image_path))        
 
         return features  # Return the dictionary of extracted features
     
