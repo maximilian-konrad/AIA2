@@ -14,6 +14,7 @@ from ..core.noise_detection import estimate_noise # Function to extract noise va
 from ..core.contrast_of_brightness import calculate_contrast_of_brightness # Function to calculate contrast of brightness
 from ..core.image_clarity import calculate_image_clarity # Function to calculate image clarity
 from ..core.warm_cold_hue import calculate_hue_proportions # Function to calculate warm hue proportion and cold hue proportion
+from ..core.salient_region_features import calculate_salient_region_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
 
 class AIA:
     """
@@ -83,6 +84,9 @@ class AIA:
 
         # Extract Warm hue and Cold hue values
         features.update(calculate_hue_proportions(image_path))        
+
+        # Extract Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
+        features.update(calculate_salient_region_features(image_path))
 
         return features  # Return the dictionary of extracted features
     
