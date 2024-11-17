@@ -113,8 +113,3 @@ def calculate_salient_region_features(image_path):
     }
 
     return features
-
-# Example usage
-image_path = "image_6.jpg"  # Replace with your image path
-features = calculate_salient_region_features(image_path)
-print(features)
