@@ -11,7 +11,7 @@ To set up the Conda environment, follow these steps:
 1. **Clone the repository**:
 
    ```bash
-   git clone https://github.com/leokinzinger/Automated-Image-Analysis.git
+   git clone https://github.com/maximilian-konrad/AIA2.git
    cd automated-image-analytics
    ```
 
