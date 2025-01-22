@@ -52,40 +52,6 @@ class AIA:
         
         print(f"Initialized AIA pipeline with config: {config}")
 
-    def process_image(self, image_path):
-        """
-        Process an individual image using the AIA pipeline.
-
-        :param image_path: The path to the image to process.
-        :return: A dictionary containing the extracted features of the image.
-        """
-        
-        # Initialize a dictionary to hold the features, starting with the image path
-        features = {
-            'image_path': image_path
-        }
-
-        # List of tuples containing the function and a description for timing
-        feature_extractors = [
-            extract_basic_image_features, # Extract basic image features (e.g., color histograms, entropy) and add them to the features dictionary
-            neural_image_assessment, # Extract NIMA score
-            extract_blur_value, # Extract Blur value
-            estimate_noise, # Extract Noise value
-            calculate_contrast_of_brightness, # Extract Contrast of Brightness value
-            calculate_image_clarity, # Extract Image Clarity value
-            calculate_hue_proportions, # Extract Warm hue and Cold hue values
-            calculate_salient_region_features  # Extract Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
-        ]
-
-        # Iterate over each feature extractor function
-        for func in feature_extractors:
-            tic = time.perf_counter()
-            features.update(func(image_path))
-            toc = time.perf_counter()
-            print(f"Time for {func.__name__}(): {toc - tic:.4f} seconds")
-        
-        return features  # Return the dictionary of extracted features
-    
     def process_batch(self, img_dir):
         """
         Process a batch of images located in a specified directory.
@@ -96,16 +62,39 @@ class AIA:
         
         print(f"Processing batch of images from: {img_dir}")
 
-        results = []  # Initialize an empty list to store the results
+        # Initialize an empty list to store the results
+        results = []
         
-        # Get a list of all image files in the directory (only PNG, JPG, JPEG formats)
-        image_files = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        # Get a list of all image files in the directory (only PNG, JPG, JPEG, WEBP formats)
+        image_files = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
 
-        # Iterate over each image file with a progress bar
-        for image_path in tqdm(image_files, desc="Processing images"):
-            result = self.process_image(image_path)  # Process the image
-            results.append(result)  # Append the result to the list
+        # Initialize a dictionary to hold features for each image
+        features_dict = {image_path: {'image_path': image_path} for image_path in image_files}
 
+        # List of feature extractor functions
+        feature_extractors = [
+            extract_basic_image_features,
+            neural_image_assessment,
+            extract_blur_value,
+            estimate_noise,
+            calculate_contrast_of_brightness,
+            calculate_image_clarity,
+            calculate_hue_proportions,
+            calculate_salient_region_features
+        ]
+
+        # Iterate over each feature extractor function
+        for func in feature_extractors:
+            tic = time.perf_counter()
+            # Iterate over all images
+            for image_path in tqdm(image_files, desc=f"Processing {func.__name__} on all n={len(image_files)} images"):
+                features_dict[image_path].update(func(image_path))
+            toc = time.perf_counter()
+            print(f"Time for {func.__name__} on all n={len(image_files)} images: {toc - tic:.4f} seconds")
+
+        # Convert the features dictionary to a list of results
+        results = list(features_dict.values())
+        
         self.results = results  # Store the results as an instance variable
         return self.results  # Return the list of results
    
