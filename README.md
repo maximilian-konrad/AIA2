@@ -20,7 +20,7 @@ To set up the Conda environment, follow these steps:
     Ensure you have Conda installed. Then, create the environment using the provided environment.yml file:
     
     ```bash
-    conda env create -f environment.yml
+    conda env create -f env.yml
     ```
 
 3. **Activate the environment**:
@@ -29,3 +29,10 @@ To set up the Conda environment, follow these steps:
     conda activate aia
     ```
 
+### Run the pipeline
+
+1. **Clone the repository**:
+
+    Run pipeline.ipynb in ./src/notebooks/
+
+    Results will be stored as .XLSX file in ./outputs/

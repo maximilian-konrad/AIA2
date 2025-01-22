@@ -1,6 +1,7 @@
 # Standard library imports
 import os  # Operating system dependent functionality
 import sys  # Access to system-specific parameters and functions
+import time
 
 # Third-party library imports
 from tqdm import tqdm  # Progress bar for loops
@@ -64,30 +65,25 @@ class AIA:
             'image_path': image_path
         }
 
-        # Extract basic image features (e.g., color histograms, entropy) and add them to the features dictionary
-        features.update(extract_basic_image_features(image_path))
+        # List of tuples containing the function and a description for timing
+        feature_extractors = [
+            extract_basic_image_features, # Extract basic image features (e.g., color histograms, entropy) and add them to the features dictionary
+            neural_image_assessment, # Extract NIMA score
+            extract_blur_value, # Extract Blur value
+            estimate_noise, # Extract Noise value
+            calculate_contrast_of_brightness, # Extract Contrast of Brightness value
+            calculate_image_clarity, # Extract Image Clarity value
+            calculate_hue_proportions, # Extract Warm hue and Cold hue values
+            calculate_salient_region_features  # Extract Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
+        ]
 
-        # Extract NIMA score
-        features.update(neural_image_assessment(image_path))
+        # Iterate over each feature extractor function
+        for func in feature_extractors:
+            tic = time.perf_counter()
+            features.update(func(image_path))
+            toc = time.perf_counter()
+            print(f"Time for {func.__name__}(): {toc - tic:.4f} seconds")
         
-        # Extract Blur value
-        features.update(extract_blur_value(image_path))
-
-        # Extract Noise value
-        features.update(estimate_noise(image_path))
-
-        # Extract Contrast of Brightness value
-        features.update(calculate_contrast_of_brightness(image_path))
-
-        # Extract Image Clarity value
-        features.update(calculate_image_clarity(image_path))
-
-        # Extract Warm hue and Cold hue values
-        features.update(calculate_hue_proportions(image_path))        
-
-        # Extract Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
-        features.update(calculate_salient_region_features(image_path))
-
         return features  # Return the dictionary of extracted features
     
     def process_batch(self, img_dir):
@@ -112,8 +108,7 @@ class AIA:
 
         self.results = results  # Store the results as an instance variable
         return self.results  # Return the list of results
-
-    
+   
     def save_results(self, output_path=None):
         """
         Save the processed results to an Excel file.

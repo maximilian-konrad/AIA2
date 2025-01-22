@@ -10,11 +10,10 @@ def calculate_salient_region_features(image_path):
     2. Rule of Thirds (ROT)
     3. Visual Balance Intensity
     4. Visual Balance Color
-
     """
 
     # Load the DeepLabV3 pre-trained model for saliency detection
-    model = models.segmentation.deeplabv3_resnet101(pretrained=True)
+    model = models.segmentation.deeplabv3_resnet101(weights=True)
     model.eval()
 
     # Load the image and preprocess
