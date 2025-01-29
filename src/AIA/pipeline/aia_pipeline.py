@@ -16,6 +16,7 @@ from ..core.contrast_of_brightness import calculate_contrast_of_brightness # Fun
 from ..core.image_clarity import calculate_image_clarity # Function to calculate image clarity
 from ..core.warm_cold_hue import calculate_hue_proportions # Function to calculate warm hue proportion and cold hue proportion
 from ..core.salient_region_features import calculate_salient_region_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
+from ..core.get_coco_labels import get_coco_labels # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
 
 class AIA:
     """
@@ -60,16 +61,12 @@ class AIA:
         :return: A list of dictionaries, each containing the features extracted from one image.
         """
         
-        print(f"Processing batch of images from: {img_dir}")
-
-        # Initialize an empty list to store the results
-        results = []
-        
         # Get a list of all image files in the directory (only PNG, JPG, JPEG, WEBP formats)
         image_files = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
 
-        # Initialize a dictionary to hold features for each image
-        features_dict = {image_path: {'image_path': image_path} for image_path in image_files}
+        # Initialize a dataframe with a single column filename and is filled with all image_files from image_files
+        df_images = pd.DataFrame({'filename': image_files})
+        df_out = df_images.copy(deep=True)
 
         # List of feature extractor functions
         feature_extractors = [
@@ -80,25 +77,24 @@ class AIA:
             calculate_contrast_of_brightness,
             calculate_image_clarity,
             calculate_hue_proportions,
-            calculate_salient_region_features
+            calculate_salient_region_features,
         ]
 
-        # Iterate over each feature extractor function
+        print(f"Processing batch of n={len(df_images)} images from: {img_dir}")
+        # Iterate over each function specified in feature extractor
         for func in feature_extractors:
+            print(f"Processing {func.__name__}()")
             tic = time.perf_counter()
-            # Iterate over all images
-            for image_path in tqdm(image_files, desc=f"Processing {func.__name__} on all n={len(image_files)} images"):
-                features_dict[image_path].update(func(image_path))
+            # Execute function
+            df_temp = func(df_images)
+            # Append results to dataframe
+            df_out = df_out.merge(df_temp, on='filename', how='left')
             toc = time.perf_counter()
-            print(f"Time for {func.__name__} on all n={len(image_files)} images: {toc - tic:.4f} seconds")
+            print(f"Time for {func.__name__}(): {toc - tic:.4f} seconds")
 
-        # Convert the features dictionary to a list of results
-        results = list(features_dict.values())
-        
-        self.results = results  # Store the results as an instance variable
-        return self.results  # Return the list of results
+        return df_out
    
-    def save_results(self, output_path=None):
+    def save_results(self, df_results, output_path=None):
         """
         Save the processed results to an Excel file.
 
@@ -106,14 +102,11 @@ class AIA:
                             the results will be saved in the default output directory.
         """
         
-        # Convert the results (a list of dictionaries) into a pandas DataFrame
-        df = pd.DataFrame(self.results)
-        
         # Save the DataFrame to an Excel file, either to the specified path or to the default location
         if output_path is not None:
-            df.to_excel(output_path, index=False)
+            df_results.to_excel(output_path, index=False)
         else:
             output_path = os.path.join(self.output_dir, 'results.xlsx')
-            df.to_excel(output_path, index=False)
+            df_results.to_excel(output_path, index=False)
         
         print(f"Results saved to: {output_path}")
