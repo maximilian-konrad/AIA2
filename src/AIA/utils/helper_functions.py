@@ -1,0 +1,37 @@
+import urllib.request
+from tqdm import tqdm
+import os
+def download_weights(weight_filename, weight_url):
+    """
+    Downloads model weights if they do not exist locally yet
+
+    : param weight_filename: The filename that the model weights should be saved as
+    : param weight_url: The URL that the mdoel weight can be downloaded from
+    """
+
+    # Define a callback function to update the progress bar
+    def reporthook(block_num, block_size, total_size):
+        """
+        Downloads model weights if they do not exist locally yet
+
+        : param weight_filename: The filename that the model weights should be saved as
+        : param weight_url: The URL that the mdoel weight can be downloaded from
+        """
+
+
+        if pbar.total is None:
+            pbar.total = total_size
+        pbar.update(block_size)
+
+    weights_dir = '../AIA/weights/'
+    weights_file = os.path.join(weights_dir, weight_filename)
+
+    # Create the directory if it doesn't exist
+    if not os.path.exists(weights_dir):
+        os.makedirs(weights_dir)
+
+    # Check and download the config file if it doesn't exist
+    if not os.path.isfile(weights_file):
+        print(f"Weights {weights_file} are not stored locally. Downloading...")
+        with tqdm(unit='B', unit_scale=True, miniters=1, desc=weights_file) as pbar:
+            urllib.request.urlretrieve(weight_url, weights_file, reporthook=reporthook)

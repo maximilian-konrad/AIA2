@@ -71,13 +71,14 @@ class AIA:
         # List of feature extractor functions
         feature_extractors = [
             extract_basic_image_features,
-            neural_image_assessment,
-            extract_blur_value,
-            estimate_noise,
-            calculate_contrast_of_brightness,
-            calculate_image_clarity,
-            calculate_hue_proportions,
-            calculate_salient_region_features,
+            # neural_image_assessment,
+            # extract_blur_value,
+            # estimate_noise,
+            # calculate_contrast_of_brightness,
+            # calculate_image_clarity,
+            # calculate_hue_proportions,
+            # calculate_salient_region_features,
+            get_coco_labels,
         ]
 
         print(f"Processing batch of n={len(df_images)} images from: {img_dir}")
