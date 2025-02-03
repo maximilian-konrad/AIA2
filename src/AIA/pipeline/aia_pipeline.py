@@ -54,17 +54,14 @@ class AIA:
         
         print(f"Initialized AIA pipeline with config: {config}")
 
-    def process_batch(self, img_dir):
+    def process_batch(self, image_files):
         """
-        Process a batch of images located in a specified directory.
+        Process a batch of images from a list of file paths.
 
-        :param img_dir: The directory containing the images to be processed.
-        :return: A list of dictionaries, each containing the features extracted from one image.
+        :param image_files: A list of file paths for the images to be processed.
+        :return: A DataFrame containing the features extracted from each image.
         """
         
-        # Get a list of all image files in the directory (only PNG, JPG, JPEG, WEBP formats)
-        image_files = [os.path.join(img_dir, f) for f in os.listdir(img_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
-
         # Initialize a dataframe with a single column filename and is filled with all image_files from image_files
         df_images = pd.DataFrame({'filename': image_files})
         df_out = df_images.copy(deep=True)
@@ -83,7 +80,7 @@ class AIA:
             get_color_features
         ]
 
-        print(f"Processing batch of n={len(df_images)} images from: {img_dir}")
+        print(f"Processing batch of n={len(df_images)} images")
         # Iterate over each function specified in feature extractor
         for func in feature_extractors:
             print(f"Processing {func.__name__}()")

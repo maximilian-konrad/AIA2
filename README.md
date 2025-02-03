@@ -31,7 +31,13 @@ To set up the Conda environment, follow these steps:
 
 ### Run the pipeline
 
-1. **Clone the repository**:
+Option A: **Use the webapp**:
+    Run app.py in ./
+
+    Open http://127.0.0.1:5000 and upload your images. 
+    Once completed, the results will be available for download.
+
+Option B: **Use the Jupyter notebook**:
 
     Run pipeline.ipynb in ./src/notebooks/
 
