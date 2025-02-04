@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Analysis</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f9;
+            flex-direction: column;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            width: 300px;
+            text-align: center;
+            background-color: #fff;
+            margin-bottom: 20px;
+        }
+        .upload-area.dragover {
+            border-color: #333;
+        }
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        .upload-area label {
+            cursor: pointer;
+            color: #007bff;
+        }
+        .file-list {
+            max-height: 150px;
+            overflow-y: auto;
+            width: 300px;
+            border: 1px solid #ccc;
+            background-color: #fff;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .file-list-item {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <h1>AIA2 Image Assessment</h1>
+    <div class="upload-area" id="upload-area">
+        <form method="post" enctype="multipart/form-data">
+            <input type="file" id="file-input" name="file" multiple>
+            <label for="file-input">Drag & Drop Images Here or Click to Select</label>
+            <br><br>
+            <button type="submit">Upload and Process</button>
+        </form>
+    </div>
+    <div class="file-list" id="file-list"></div>
+    {% if download_link %}
+        <br>
+        <a href="{{ url_for('download_file', filename=download_link) }}">Download Results</a>
+    {% endif %}
+
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const fileList = document.getElementById('file-list');
+
+        uploadArea.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (event) => {
+            event.preventDefault();
+            uploadArea.classList.remove('dragover');
+            fileInput.files = event.dataTransfer.files;
+            updateFileList();
+        });
+
+        fileInput.addEventListener('change', updateFileList);
+
+        function updateFileList() {
+            fileList.innerHTML = '';
+            Array.from(fileInput.files).forEach(file => {
+                const listItem = document.createElement('div');
+                listItem.className = 'file-list-item';
+                listItem.textContent = file.name;
+                fileList.appendChild(listItem);
+            });
+        }
+    </script>
+</body>
+</html> 
