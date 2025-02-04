@@ -3,8 +3,56 @@ import numpy as np
 import os
 from tqdm import tqdm
 from ..utils.helper_functions import download_weights
+from ultralytics import YOLO
 
-def get_coco_labels(df_images):
+def detect_coco_labels_yolo11(df_images):
+    """
+    Detects COCO labels in a list of images.
+
+    :param image_pats: Path to image file.
+    :return: A list of dictionaries, each containing COCO labels and their presence for each image.
+    """
+
+    # Create a copy of the input DataFrame to store results
+    df = df_images.copy()
+
+    # Check if weights are downloaded already, otherwise download them
+    download_weights(weight_filename='yolov11n.pt', weight_url='https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt')
+
+    # Load the YOLOv11 model
+    model = YOLO('../AIA/weights/yolov11n.pt')
+
+    # Load COCO labels
+    with open('../AIA/weights/coco.names', 'r') as f:
+        classes = ['coco_' + line.strip() for line in f.readlines()]
+
+    # Initialize columns for each class
+    for label in classes:
+        df[label] = False
+
+    # Iterate over all images using enumerate on the DataFrame column
+    for idx, image_path in enumerate(tqdm(df_images['filename'])):
+
+        # Load image
+        img = cv.imread(image_path)
+        if img is None:
+            print(f"Could not read image {image_path}")
+            continue
+
+        # Perform inference
+        results = model(img)
+
+        # Analyze the outputs
+        for result in results:
+            for detection in result.boxes:
+                class_id = int(detection.cls)
+                confidence = detection.conf
+                if confidence > 0.5:  # Confidence threshold
+                    df.at[idx, classes[class_id]] = True
+
+    return df
+
+def detect_coco_labels_yolo_v3(df_images):
     """
     Detects COCO labels in a list of images.
 
