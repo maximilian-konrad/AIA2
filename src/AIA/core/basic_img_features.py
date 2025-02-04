@@ -31,31 +31,53 @@ def extract_basic_image_features(df_images):
         # Load the image using cv2
         image = cv2.imread(image_path)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # File specific features
+        df.loc[idx, 'fileName'] = os.path.splitext(os.path.basename(image_path))[0]
+        df.loc[idx, 'fileType'] = os.path.splitext(image_path)[1][1:].lower()
+        df.loc[idx, 'fileSize'] = os.path.getsize(image_path) / 1024
+        df.loc[idx, 'fileCreationTime'] = os.path.getctime(image_path)
+
+        # # Image meta data
+        # df.loc[idx, 'lens'] = image.get('Lens', 'NA')
+        # df.loc[idx, 'focalLength'] = image.get('FocalLength', 'NA')
+        # df.loc[idx, 'aperture'] = image.get('Aperture', 'NA')
+        # df.loc[idx, 'exposureTime'] = image.get('ExposureTime', 'NA')
+        # df.loc[idx, 'ISO'] = image.get('ISO', 'NA')
+        # df.loc[idx, 'shutterSpeed'] = image.get('ShutterSpeedValue', 'NA')
+        # df.loc[idx, 'whiteBalance'] = image.get('WhiteBalance', 'NA')
+        # df.loc[idx, 'flash'] = image.get('Flash', 'NA')
+        # df.loc[idx, 'meteringMode'] = image.get('MeteringMode', 'NA')
+        # df.loc[idx, 'exposureProgram'] = image.get('ExposureProgram', 'NA')
 
         # Image dimensions
         df.loc[idx, 'height'] = image.shape[0]
         df.loc[idx, 'width'] = image.shape[1]
+        df.loc[idx, 'aspectRatio'] = df.loc[idx, 'width'] / df.loc[idx, 'height']
 
-        # Image size in kB
-        df.loc[idx, 'size_kb'] = os.path.getsize(image_path) / 1024
+        # Color channels
+        df.loc[idx, 'rMean'] = np.mean(image_rgb[:, :, 0])
+        df.loc[idx, 'rStd'] = np.std(image_rgb[:, :, 0])
+        df.loc[idx, 'gMean'] = np.mean(image_rgb[:, :, 1])
+        df.loc[idx, 'gStd'] = np.std(image_rgb[:, :, 1])
+        df.loc[idx, 'bMean'] = np.mean(image_rgb[:, :, 2])
+        df.loc[idx, 'bStd'] = np.std(image_rgb[:, :, 2])
 
-        # RGB means
-        df.loc[idx, 'r_mean'] = np.mean(image_rgb[:, :, 0])
-        df.loc[idx, 'g_mean'] = np.mean(image_rgb[:, :, 1])
-        df.loc[idx, 'b_mean'] = np.mean(image_rgb[:, :, 2])
+        # HSV channels
+        # df.loc[idx, 'hueMean'] = np.mean(image_hsv[:, :, 0])
+        # df.loc[idx, 'hueStd'] = np.std(image_hsv[:, :, 0])
+        # df.loc[idx, 'saturationMean'] = np.mean(image_hsv[:, :, 1])
+        # df.loc[idx, 'saturationStd'] = np.std(image_hsv[:, :, 1])
+        # df.loc[idx, 'brightnessMean'] = np.mean(image_hsv[:, :, 2])
+        # df.loc[idx, 'brightnessStd'] = np.std(image_hsv[:, :, 2])
 
-        # Convert RGB to HSV using cv2
-        hsv_image = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2HSV)
-        df.loc[idx, 'hue_mean'] = np.mean(hsv_image[:, :, 0])
-        df.loc[idx, 'saturation_mean'] = np.mean(hsv_image[:, :, 1])
-        df.loc[idx, 'brightness_mean'] = np.mean(hsv_image[:, :, 2])
+        # # Grayscale
+        # df.loc[idx, 'greyscaleMean'] = np.mean(image_gray)
+        # df.loc[idx, 'greyscaleStd'] = np.std(image_gray)
 
-        # Convert to Greyscale using cv2
-        grayscale_image = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2GRAY)
-        df.loc[idx, 'greyscale_mean'] = np.mean(grayscale_image)
-        
-        # Calculate Shannon Entropy
-        df.loc[idx, 'shannon_entropy'] = measure.shannon_entropy(grayscale_image)
+        # # Shannon entropy
+        # df.loc[idx, 'shannonEntropy'] = measure.shannon_entropy(image_gray)
 
     return df
-
