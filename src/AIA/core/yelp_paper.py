@@ -21,7 +21,7 @@ Each feature will be an individual function.
 
 3. Figure-ground Relationship Features:
    - sizeDifference
-   - colorSifference
+   - colorDifference
    - textureDifference
    - depthOfField
 """
@@ -30,7 +30,7 @@ Each feature will be an individual function.
 import cv2
 from tqdm import tqdm
 import numpy as np
-
+import pywt
 
 def get_color_features(df_images):
     """
@@ -259,4 +259,163 @@ def get_composition_features(df_images):
         df.loc[idx, 'colorVisualBalanceHorizontal'] = horizontal_color_balance
         df.loc[idx, 'colorVisualBalanceMean'] = colorVisualBalance_average
 
+    return df
+
+
+
+def get_figure_ground_relationship_features(df_images):
+    """
+    Computes figure-ground relationship features for each image according to the specifications.
+    
+    For each image, the following features are computed:
+      - sizeDifference: The absolute difference between the number of figure pixels and background pixels,
+                        normalized by the total number of pixels.
+      - colorDifference: The Euclidean distance between the average RGB vector of the figure and that of the background,
+                         normalized to [0, 1] (using 441.67 as the maximum difference).
+      - textureDifference: The absolute difference between the edge densities (using Canny) of the figure and background,
+                           normalized to [0, 1].
+      - depthOfField: Computed for each HSV dimension (hue, saturation, value) as follows:
+            • The image is divided into 16 equal regions.
+            • For each HSV channel, the high-frequency (detail) coefficients are computed using a Daubechies wavelet (pywt.dwt2).
+            • The score is defined as the sum of absolute detail coefficients in the center four regions divided by the sum
+              of absolute detail coefficients over all 16 regions.
+            A higher score indicates a lower depth of field.
+    
+    :param df_images: DataFrame containing a 'filename' column with paths to image files.
+    :return: DataFrame with added feature columns:
+             - sizeDifference
+             - colorDifference
+             - textureDifference
+             - depthOfFieldHue, depthOfFieldSaturation, depthOfFieldValue
+    """
+    
+    df = df_images.copy()
+    
+    # Initialize feature columns using camelCase naming
+    df['sizeDifference'] = np.nan
+    df['colorDifference'] = np.nan
+    df['textureDifference'] = np.nan
+    df['depthOfFieldHue'] = np.nan
+    df['depthOfFieldSaturation'] = np.nan
+    df['depthOfFieldValue'] = np.nan
+
+    # Create a saliency detector for figure-ground segmentation
+    saliency_detector = cv2.saliency.StaticSaliencySpectralResidual_create()
+    
+    # Maximum possible color difference in RGB (Euclidean distance)
+    max_color_distance = np.sqrt(255**2 + 255**2 + 255**2)  # ≈441.67
+
+    for idx, image_path in enumerate(tqdm(df_images['filename'])):
+        image = cv2.imread(image_path)
+        if image is None:
+            continue
+
+        H, W = image.shape[:2]
+        total_pixels = H * W
+        
+        # Compute saliency map and threshold to segment figure (salient) vs background
+        success, saliencyMap = saliency_detector.computeSaliency(image)
+        if not success or saliencyMap is None:
+            saliencyMap = np.ones((H, W), dtype="float32")
+        else:
+            saliencyMap = saliencyMap.squeeze()
+            if saliencyMap.ndim != 2:
+                saliencyMap = saliencyMap[:, :, 0]
+        # Normalize saliency map to [0,1] if not already
+        saliencyMap = cv2.normalize(saliencyMap, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
+        _, figureMask = cv2.threshold(saliencyMap, 0.5, 1, cv2.THRESH_BINARY)
+        figureMask = figureMask.astype(np.uint8)
+        backgroundMask = 1 - figureMask
+        
+        # 1. Size Difference
+        figure_pixels = np.sum(figureMask, dtype=np.int64)
+        print(f"figure size:{figure_pixels}")
+        background_pixels = np.sum(backgroundMask, dtype=np.int64)
+        print(f"background size: {background_pixels}")
+        print(f"total size: {total_pixels}")
+        sizeDifference = np.abs(figure_pixels - background_pixels) / float(total_pixels)
+        print(f"sizeDifference{sizeDifference}")
+        
+        # 2. Color Difference
+        # Compute average RGB for figure and background; if a region is empty, use zeros.
+        figure_pixels_indices = np.where(figureMask == 1)
+        background_pixels_indices = np.where(backgroundMask == 1)
+        if figure_pixels > 0:
+            avgRGB_figure = np.mean(image[figure_pixels_indices], axis=0)
+        else:
+            avgRGB_figure = np.zeros(3)
+        if background_pixels > 0:
+            avgRGB_background = np.mean(image[background_pixels_indices], axis=0)
+        else:
+            avgRGB_background = np.zeros(3)
+        color_diff = np.linalg.norm(avgRGB_figure - avgRGB_background)
+        colorDifference = np.clip(color_diff / max_color_distance, 0, 1)
+        
+        # 3. Texture Difference
+        # Use Canny edge detection on grayscale image
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        edges = cv2.Canny(gray, 100, 200)
+        print(f"edges:{edges}")
+        # Compute edge density for figure and background
+        if figure_pixels > 0:
+            edge_density_figure = np.sum(edges[figure_pixels_indices] > 0) / float(figure_pixels)
+            print(f"edge_density_figure is {edge_density_figure}")
+        else:
+            edge_density_figure = 0
+        if background_pixels > 0:
+            edge_density_background = np.sum(edges[background_pixels_indices] > 0) / float(background_pixels)
+            print(f"edge_density_background is {edge_density_background}")
+        else:
+            edge_density_background = 0
+        textureDifference = np.clip(np.abs(edge_density_figure - edge_density_background), 0, 1)
+        
+        # 4. Depth of Field (for each HSV channel)
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV).astype("float32")
+        # Divide the image into a 4x4 grid (16 regions)
+        grid_rows, grid_cols = 4, 4
+        region_h = H // grid_rows
+        region_w = W // grid_cols
+        
+        # Define indices for center 4 regions (positions (1,1), (1,2), (2,1), (2,2) in 0-indexing)
+        center_regions = [(1,1), (1,2), (2,1), (2,2)]
+        
+        # Initialize sums for each channel: hue, saturation, value
+        total_detail = {'hue': 0, 'sat': 0, 'val': 0}
+        center_detail = {'hue': 0, 'sat': 0, 'val': 0}
+        
+        # For each region in the 4x4 grid
+        for i in range(grid_rows):
+            for j in range(grid_cols):
+                y0 = i * region_h
+                x0 = j * region_w
+                # Make sure to include remaining pixels for the last row/column
+                y1 = H if i == grid_rows - 1 else (i+1)*region_h
+                x1 = W if j == grid_cols - 1 else (j+1)*region_w
+                
+                region = hsv[y0:y1, x0:x1, :]
+                # For each channel, compute the sum of absolute high-frequency coefficients using a Daubechies wavelet.
+                # We perform a single-level 2D DWT.
+                for idx_channel, key in enumerate(['hue', 'sat', 'val']):
+                    coeffs2 = pywt.dwt2(region[:, :, idx_channel], 'db1')
+                    # coeffs2 returns (LL, (LH, HL, HH)); we sum absolute values of high-frequency coefficients.
+                    (_, (LH, HL, HH)) = coeffs2
+                    detail_sum = np.sum(np.abs(LH)) + np.sum(np.abs(HL)) + np.sum(np.abs(HH))
+                    total_detail[key] += detail_sum
+                    if (i, j) in center_regions:
+                        center_detail[key] += detail_sum
+        
+        # For each channel, compute depth-of-field score as center_detail/total_detail.
+        # Avoid division by zero.
+        dof_hue = center_detail['hue'] / total_detail['hue'] if total_detail['hue'] != 0 else 0
+        dof_sat = center_detail['sat'] / total_detail['sat'] if total_detail['sat'] != 0 else 0
+        dof_val = center_detail['val'] / total_detail['val'] if total_detail['val'] != 0 else 0
+
+        # Save features into DataFrame (clipped to [0, 1] where applicable)
+        df.loc[idx, 'sizeDifference'] = sizeDifference
+        df.loc[idx, 'colorDifference'] = colorDifference
+        df.loc[idx, 'textureDifference'] = textureDifference
+        df.loc[idx, 'depthOfFieldHue'] = np.clip(dof_hue, 0, 1)
+        df.loc[idx, 'depthOfFieldSaturation'] = np.clip(dof_sat, 0, 1)
+        df.loc[idx, 'depthOfFieldValue'] = np.clip(dof_val, 0, 1)
+        
     return df
