@@ -17,7 +17,7 @@ from ..core.image_clarity import calculate_image_clarity # Function to calculate
 from ..core.warm_cold_hue import calculate_hue_proportions # Function to calculate warm hue proportion and cold hue proportion
 from ..core.salient_region_features import calculate_salient_region_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
 from ..core.get_coco_labels import detect_coco_labels_yolo11 # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
-from ..core.yelp_paper import get_color_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
+from ..core.yelp_paper import get_color_features, get_composition_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
 
 class AIA:
     """
@@ -68,7 +68,7 @@ class AIA:
 
         # List of feature extractor functions
         feature_extractors = [
-            extract_basic_image_features,
+            # extract_basic_image_features,
             # neural_image_assessment,
             # extract_blur_value,
             # estimate_noise,
@@ -77,7 +77,8 @@ class AIA:
             # calculate_hue_proportions,
             # calculate_salient_region_features,
             # detect_coco_labels_yolo11,
-            get_color_features
+            # get_color_features
+            get_composition_features
         ]
 
         print(f"Processing batch of n={len(df_images)} images")

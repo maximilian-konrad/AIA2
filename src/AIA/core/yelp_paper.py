@@ -126,3 +126,137 @@ def get_color_features(df_images):
         df['colorfulness'] = (raw_colorfulness - min_c) / (max_c - min_c)
 
     return df
+
+
+def get_composition_features(df_images):
+    """
+    Computes composition features for each image according to the specifications.
+
+    For each image, the following features are computed:
+      - diagonalDominance: The normalized (inverted) minimum distance from the salient center to the two image diagonals.
+      - ruleOfThirds: The normalized (inverted) minimum distance from the salient center to the four intersections of a 3×3 grid.
+      - physicalVisualBalance:
+            • physicalVisualBalance_vertical: 1 minus the normalized vertical distance between the salient center and the image center.
+            • physicalVisualBalance_horizontal: 1 minus the normalized horizontal distance between the salient center and the image center.
+            • physicalVisualBalance (average): The average of the vertical and horizontal scores.
+      - colorVisualBalance:
+            • colorVisualBalance_vertical: 1 minus the normalized average Euclidean color distance between top and bottom symmetric pixels.
+            • colorVisualBalance_horizontal: 1 minus the normalized average Euclidean color distance between left and right symmetric pixels.
+            • colorVisualBalance (average): The average of the vertical and horizontal scores.
+
+    :param df_images: DataFrame containing a 'filename' column with paths to image files.
+    :return: DataFrame with added feature columns:
+             - diagonalDominance
+             - ruleOfThirds
+             - physicalVisualBalance_vertical, physicalVisualBalance_horizontal, physicalVisualBalance (average)
+             - colorVisualBalance_vertical, colorVisualBalance_horizontal, colorVisualBalance (average)
+    """
+
+    # Create a copy of the input DataFrame to store results
+    df = df_images.copy()
+
+    # Initialize composition feature columns
+    df['diagonalDominance'] = np.nan
+    df['ruleOfThirds'] = np.nan
+    df['physicalVisualBalanceVertical'] = np.nan
+    df['physicalVisualBalanceHorizontal'] = np.nan
+    df['physicalVisualBalanceMean'] = np.nan
+    df['colorVisualBalanceVertical'] = np.nan
+    df['colorVisualBalanceHorizontal'] = np.nan
+    df['colorVisualBalanceMean'] = np.nan
+
+    # Create a saliency detector using OpenCV's StaticSaliencySpectralResidual
+    saliency_detector = cv2.saliency.StaticSaliencySpectralResidual_create()
+
+    # Maximum possible color difference in RGB space (Euclidean distance)
+    max_color_distance = np.sqrt(255 ** 2 + 255 ** 2 + 255 ** 2)  # ≈441.67
+
+    # Iterate over each image in the DataFrame
+    for idx, image_path in enumerate(tqdm(df_images['filename'])):
+        # Load the image using cv2
+        image = cv2.imread(image_path)
+        if image is None:
+            continue
+
+        # Get image dimensions (height and width)
+        H, W = image.shape[:2]
+
+        # Compute saliency map
+        success, saliencyMap = saliency_detector.computeSaliency(image)
+        if not success or saliencyMap is None:
+            saliencyMap = np.ones((H, W), dtype="float32")
+        else:
+            saliencyMap = saliencyMap.squeeze()
+            if saliencyMap.ndim != 2:
+                saliencyMap = saliencyMap[:, :, 0]
+
+        # Compute the weighted (salient) center
+        X, Y = np.meshgrid(np.arange(W), np.arange(H))
+        total_saliency = np.sum(saliencyMap)
+        if total_saliency > 0:
+            cx = np.sum(X * saliencyMap) / total_saliency
+            cy = np.sum(Y * saliencyMap) / total_saliency
+        else:
+            cx, cy = W / 2.0, H / 2.0
+
+        # 1. Diagonal Dominance
+        d1 = np.abs(H * cx - W * cy) / np.sqrt(W ** 2 + H ** 2)  # Distance to diagonal from top-left to bottom-right
+        d2 = np.abs(H * cx + W * cy - H * W) / np.sqrt(
+            W ** 2 + H ** 2)  # Distance to diagonal from top-right to bottom-left
+        d_min = min(d1, d2)
+        D_max = (W * H) / np.sqrt(W ** 2 + H ** 2)  # Maximum possible distance to a diagonal
+        diagonalDominance = 1 - (d_min / D_max)
+        diagonalDominance = np.clip(diagonalDominance, 0, 1)
+
+        # 2. Rule of Thirds
+        intersections = [(W / 3.0, H / 3.0), (2 * W / 3.0, H / 3.0),
+                         (W / 3.0, 2 * H / 3.0), (2 * W / 3.0, 2 * H / 3.0)]
+        distances = [np.sqrt((cx - x) ** 2 + (cy - y) ** 2) for (x, y) in intersections]
+        min_distance = min(distances)
+        max_distance = np.sqrt(W ** 2 + H ** 2) / 3.0  # Normalization factor
+        ruleOfThirds = 1 - (min_distance / max_distance)
+        ruleOfThirds = np.clip(ruleOfThirds, 0, 1)
+
+        # 3. Physical Visual Balance
+        vertical_balance = 1 - (np.abs(cy - H / 2.0) / (H / 2.0)) if H > 0 else 0
+        horizontal_balance = 1 - (np.abs(cx - W / 2.0) / (W / 2.0)) if W > 0 else 0
+        physicalVisualBalance_average = (vertical_balance + horizontal_balance) / 2.0
+
+        # 4. Color Visual Balance
+        # Vertical color balance: compare top and bottom halves
+        h_half = H // 2
+        if h_half > 0:
+            top_half = image[0:h_half, :, :].astype("float32")
+            bottom_half = image[H - h_half:H, :, :].astype("float32")
+            diff_v = np.sqrt(np.sum((top_half - bottom_half) ** 2, axis=2))
+            avg_diff_v = np.mean(diff_v)
+            vertical_color_balance = 1 - (avg_diff_v / max_color_distance)
+            vertical_color_balance = np.clip(vertical_color_balance, 0, 1)
+        else:
+            vertical_color_balance = 1
+
+        # Horizontal color balance: compare left and right halves (mirror the right half)
+        w_half = W // 2
+        if w_half > 0:
+            left_half = image[:, 0:w_half, :].astype("float32")
+            right_half = image[:, W - w_half:W, :].astype("float32")[:, ::-1, :]
+            diff_h = np.sqrt(np.sum((left_half - right_half) ** 2, axis=2))
+            avg_diff_h = np.mean(diff_h)
+            horizontal_color_balance = 1 - (avg_diff_h / max_color_distance)
+            horizontal_color_balance = np.clip(horizontal_color_balance, 0, 1)
+        else:
+            horizontal_color_balance = 1
+
+        colorVisualBalance_average = (vertical_color_balance + horizontal_color_balance) / 2.0
+
+        # Save features into DataFrame
+        df.loc[idx, 'diagonalDominance'] = diagonalDominance
+        df.loc[idx, 'ruleOfThirds'] = ruleOfThirds
+        df.loc[idx, 'physicalVisualBalanceVertical'] = vertical_balance
+        df.loc[idx, 'physicalVisualBalanceHorizontal'] = horizontal_balance
+        df.loc[idx, 'physicalVisualBalanceMean'] = physicalVisualBalance_average
+        df.loc[idx, 'colorVisualBalanceVertical'] = vertical_color_balance
+        df.loc[idx, 'colorVisualBalanceHorizontal'] = horizontal_color_balance
+        df.loc[idx, 'colorVisualBalanceMean'] = colorVisualBalance_average
+
+    return df
