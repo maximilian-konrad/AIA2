@@ -31,6 +31,7 @@ import cv2
 from tqdm import tqdm
 import numpy as np
 import pywt
+from src.AIA.utils.load_config import load_config
 
 def get_color_features(df_images):
     """
@@ -45,7 +46,12 @@ def get_color_features(df_images):
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added feature columns
     """
-
+    # parameters extraction for func get_color_features
+    config = load_config()
+    color_config = config.get("get_color_features", {})
+    clarity_threshold = color_config.get("clarity_threshold", 0.7)
+    warmHue_threshold_lower = color_config.get("warmHue_threshold_lower", 70)
+    warmHue_threshold_upper = color_config.get("warmHue_threshold_upper", 160)
     # Create a copy of the input DataFrame to store results
     df = df_images.copy()
 
@@ -83,10 +89,10 @@ def get_color_features(df_images):
         contrast_val = np.std(V / 255.0) * 2
 
         # Compute clarity: Proportion of pixels in V channel (normalized) that are greater than 0.7
-        clarity_val = np.mean((V / 255.0) > 0.7)
+        clarity_val = np.mean((V / 255.0) > clarity_threshold)
 
         # Compute warm hue: Proportion of warm-colored pixels (H < 70 or H > 160)
-        warm_mask = (H < 70) | (H > 160)
+        warm_mask = (H < warmHue_threshold_lower) | (H > warmHue_threshold_upper)
         warmHue_val = np.sum(warm_mask) / warm_mask.size
 
         # Compute colorfulness based on Hasler and Suesstrunk (2003)
@@ -288,6 +294,13 @@ def get_figure_ground_relationship_features(df_images):
              - textureDifference
              - depthOfFieldHue, depthOfFieldSaturation, depthOfFieldValue
     """
+
+    # parameters extraction for func get_figure_ground_relationship_features
+    config = load_config()
+    fg_config = config.get("get_figure_ground_relationship_features", {})
+    saliency_threshold = fg_config.get("saliency_threshold", 0.5)
+    canny_edge_low_threshold = fg_config.get("canny_edge_low_threshold", 100)
+    canny_edge_high_threshold = fg_config.get("canny_edge_high_threshold", 200)
     
     df = df_images.copy()
     
@@ -323,18 +336,14 @@ def get_figure_ground_relationship_features(df_images):
                 saliencyMap = saliencyMap[:, :, 0]
         # Normalize saliency map to [0,1] if not already
         saliencyMap = cv2.normalize(saliencyMap, None, alpha=0, beta=1, norm_type=cv2.NORM_MINMAX)
-        _, figureMask = cv2.threshold(saliencyMap, 0.5, 1, cv2.THRESH_BINARY)
+        _, figureMask = cv2.threshold(saliencyMap, saliency_threshold, 1, cv2.THRESH_BINARY)
         figureMask = figureMask.astype(np.uint8)
         backgroundMask = 1 - figureMask
         
         # 1. Size Difference
         figure_pixels = np.sum(figureMask, dtype=np.int64)
-        print(f"figure size:{figure_pixels}")
         background_pixels = np.sum(backgroundMask, dtype=np.int64)
-        print(f"background size: {background_pixels}")
-        print(f"total size: {total_pixels}")
         sizeDifference = np.abs(figure_pixels - background_pixels) / float(total_pixels)
-        print(f"sizeDifference{sizeDifference}")
         
         # 2. Color Difference
         # Compute average RGB for figure and background; if a region is empty, use zeros.
@@ -354,17 +363,14 @@ def get_figure_ground_relationship_features(df_images):
         # 3. Texture Difference
         # Use Canny edge detection on grayscale image
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        edges = cv2.Canny(gray, 100, 200)
-        print(f"edges:{edges}")
+        edges = cv2.Canny(gray, canny_edge_low_threshold, canny_edge_high_threshold)
         # Compute edge density for figure and background
         if figure_pixels > 0:
             edge_density_figure = np.sum(edges[figure_pixels_indices] > 0) / float(figure_pixels)
-            print(f"edge_density_figure is {edge_density_figure}")
         else:
             edge_density_figure = 0
         if background_pixels > 0:
             edge_density_background = np.sum(edges[background_pixels_indices] > 0) / float(background_pixels)
-            print(f"edge_density_background is {edge_density_background}")
         else:
             edge_density_background = 0
         textureDifference = np.clip(np.abs(edge_density_figure - edge_density_background), 0, 1)

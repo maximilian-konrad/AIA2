@@ -77,8 +77,8 @@ class AIA:
             # calculate_hue_proportions,
             # calculate_salient_region_features,
             # detect_coco_labels_yolo11,
-            # get_color_features,
-            # get_composition_features,
+            get_color_features,
+            get_composition_features,
             get_figure_ground_relationship_features
         ]
 
