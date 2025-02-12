@@ -36,6 +36,7 @@ class AIA:
             - 'resize_percent' (int): Percentage to resize the images (default: 100).
             - 'evaluate_brisque' (bool): Whether to evaluate BRISQUE score (default: False).
             - 'evaluate_sharpness' (bool): Whether to evaluate image sharpness (default: False).
+            - 'include_summary' (bool): Whether to include summary statistics (default: False).
         """
         
         # Store configuration and set up output directory
@@ -51,6 +52,7 @@ class AIA:
         self.resize_percent = config.get('resize_percent', 100)
         self.evaluate_brisque = config.get('evaluate_brisque', False)
         self.evaluate_sharpness = config.get('evaluate_sharpness', False)
+        self.incl_summary_stats = config.get('incl_summary_stats', False)
         
         print(f"Initialized AIA pipeline with config: {config}")
 
@@ -76,7 +78,7 @@ class AIA:
             # calculate_image_clarity,
             # calculate_hue_proportions,
             # calculate_salient_region_features,
-            # detect_coco_labels_yolo11,
+            detect_coco_labels_yolo11,
             get_color_features,
             get_composition_features,
             get_figure_ground_relationship_features
@@ -103,12 +105,35 @@ class AIA:
         :param output_path: The path to save the results to. If not provided,
                             the results will be saved in the default output directory.
         """
-        
-        # Save the DataFrame to an Excel file, either to the specified path or to the default location
-        if output_path is not None:
-            df_results.to_excel(output_path, index=False)
-        else:
+        if output_path is None:
             output_path = os.path.join(self.output_dir, 'results.xlsx')
-            df_results.to_excel(output_path, index=False)
+
+        # Create an Excel writer object
+        with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+            # Save the main results to the first sheet
+            df_results.to_excel(writer, sheet_name='Raw Data', index=False)
+            
+            # If summary statistics are requested, create and save them
+            if self.incl_summary_stats:
+                # Calculate summary statistics for numeric columns only
+                numeric_cols = df_results.select_dtypes(include=['int64', 'float64']).columns
+                summary_stats = df_results[numeric_cols].agg([
+                    'count',
+                    'mean',
+                    'std',
+                    'min',
+                    'max'
+                ])
+
+                # Calculate count and percentage for binary columns
+                binary_cols = df_results.select_dtypes(include=['bool']).columns
+                binary_stats = df_results[binary_cols].agg(['sum', 'count'])
+                binary_stats.loc['share'] = binary_stats.loc['sum'] / binary_stats.loc['count']
+
+                # Combine numeric and binary statistics
+                combined_stats = pd.concat([summary_stats.transpose(), binary_stats.transpose()], axis=0)
+
+                # Save combined statistics to a single sheet
+                combined_stats.to_excel(writer, sheet_name='Summary Statistics')
         
         print(f"Results saved to: {output_path}")
