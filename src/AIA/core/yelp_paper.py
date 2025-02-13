@@ -31,7 +31,7 @@ import cv2
 from tqdm import tqdm
 import numpy as np
 import pywt
-from src.AIA.utils.load_config import load_config
+from ..utils.load_config import load_config
 
 def get_color_features(df_images):
     """
