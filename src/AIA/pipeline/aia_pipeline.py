@@ -6,6 +6,7 @@ import time
 # Third-party library imports
 from tqdm import tqdm  # Progress bar for loops
 import pandas as pd  # Data manipulation and analysis
+from fpdf import FPDF
 
 # Project-specific imports
 from ..core.basic_img_features import extract_basic_image_features  # Function to extract basic features from images
@@ -18,6 +19,7 @@ from ..core.warm_cold_hue import calculate_hue_proportions # Function to calcula
 from ..core.salient_region_features import calculate_salient_region_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
 from ..core.get_coco_labels import detect_coco_labels_yolo11 # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
 from ..core.yelp_paper import get_color_features, get_composition_features, get_figure_ground_relationship_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
+from ..core.nima_idealo import calculate_aesthetic_scores # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
 
 class AIA:
     """
@@ -78,10 +80,11 @@ class AIA:
             # calculate_image_clarity,
             # calculate_hue_proportions,
             # calculate_salient_region_features,
-            detect_coco_labels_yolo11,
-            get_color_features,
-            get_composition_features,
+            # detect_coco_labels_yolo11,
+            # get_color_features,
+            # get_composition_features,
             get_figure_ground_relationship_features
+            # calculate_aesthetic_scores
         ]
 
         print(f"Processing batch of n={len(df_images)} images")
@@ -137,3 +140,38 @@ class AIA:
                 combined_stats.to_excel(writer, sheet_name='Summary Statistics')
         
         print(f"Results saved to: {output_path}")
+
+    def generate_pdf_from_excel(self, excel_path, output_pdf_path):
+        # Load the Excel file
+        xls = pd.ExcelFile(os.path.join(self.output_dir, excel_path))
+        df = pd.read_excel(xls, sheet_name='Raw Data')
+
+        # Initialize PDF
+        pdf = FPDF(orientation='L', unit='mm', format='letter')
+
+        # Iterate over each feature
+        features = df.columns[1:]  # Assuming first column is filename
+        for feature in features:
+            pdf.add_page()
+
+            # Set title
+            pdf.set_font("Arial", size=12)
+            pdf.cell(0, 10, txt=f"Feature: {feature}", ln=True, align='C')
+
+            # Find min and max images for the feature
+            min_image = df.loc[df[feature].idxmin()]['filename']
+            max_image = df.loc[df[feature].idxmax()]['filename']
+
+            # Add min image
+            pdf.set_font("Arial", size=10)
+            pdf.cell(0, 10, txt=f"Min Image: {os.path.basename(min_image)}", ln=True, align='L')
+            if os.path.exists(min_image):
+                pdf.image(min_image, x=10, y=pdf.get_y(), w=90)
+            
+            # Add max image
+            pdf.cell(0, 10, txt=f"Max Image: {os.path.basename(max_image)}", ln=True, align='R')
+            if os.path.exists(max_image):
+                pdf.image(max_image, x=110, y=pdf.get_y() - 10, w=90)  # Adjust y to align with min image
+
+        # Save the PDF
+        pdf.output(os.path.join(self.output_dir, output_pdf_path))
