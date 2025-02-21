@@ -10,7 +10,6 @@ from fpdf import FPDF
 
 # Project-specific imports
 from ..core.basic_img_features import extract_basic_image_features  # Function to extract basic features from images
-from ..core.nima_neural_image_assessment import neural_image_assessment  # Function to extract NIMA neural image assessment
 from ..core.blur_detection import extract_blur_value # Function to extract blur value
 from ..core.noise_detection import estimate_noise # Function to extract noise value
 from ..core.contrast_of_brightness import calculate_contrast_of_brightness # Function to calculate contrast of brightness
@@ -72,14 +71,13 @@ class AIA:
 
         # List of feature extractor functions
         feature_extractors = [
-            # extract_basic_image_features,
-            # neural_image_assessment,
-            # extract_blur_value,
-            # estimate_noise,
-            # calculate_contrast_of_brightness,
-            # calculate_image_clarity,
-            # calculate_hue_proportions,
-            # calculate_salient_region_features,
+            extract_basic_image_features,
+            extract_blur_value,
+            estimate_noise,
+            calculate_contrast_of_brightness,
+            calculate_image_clarity,
+            calculate_hue_proportions,
+            calculate_salient_region_features,
             detect_coco_labels_yolo11,
             get_color_features,
             get_composition_features,
