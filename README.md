@@ -42,3 +42,6 @@ Option B: **Use the Jupyter notebook**:
     Run pipeline.ipynb in ./src/notebooks/
 
     Results will be stored as .XLSX file in ./outputs/
+
+### TODO
+update nima predictor to GPU version

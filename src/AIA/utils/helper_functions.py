@@ -22,8 +22,8 @@ def download_weights(weight_filename, weight_url):
         if pbar.total is None:
             pbar.total = total_size
         pbar.update(block_size)
-
-    weights_dir = '../AIA/weights/'
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    weights_dir = os.path.join(base_dir, 'AIA', 'weights')
     weights_file = os.path.join(weights_dir, weight_filename)
 
     # Create the directory if it doesn't exist

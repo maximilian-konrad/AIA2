@@ -83,8 +83,8 @@ class AIA:
             # detect_coco_labels_yolo11,
             # get_color_features,
             # get_composition_features,
-            get_figure_ground_relationship_features
-            # calculate_aesthetic_scores
+            # get_figure_ground_relationship_features
+            calculate_aesthetic_scores
         ]
 
         print(f"Processing batch of n={len(df_images)} images")
