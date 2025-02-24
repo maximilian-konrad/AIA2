@@ -18,7 +18,7 @@ def extract_basic_image_features(df_images):
         - width: image width in pixels
         - size_kb: file size in kilobytes
         - r_mean, g_mean, b_mean: average values for RGB channels
-        - hue_mean, saturation_mean, brightness_mean: average values in HSV color space
+        - hueMean, saturationMean, brightness_mean: average values in HSV color space
         - greyscale_mean: average intensity in grayscale
         - shannon_entropy: measure of image complexity/information content
     """
@@ -66,18 +66,18 @@ def extract_basic_image_features(df_images):
         df.loc[idx, 'bStd'] = np.std(image_rgb[:, :, 2])
 
         # HSV channels
-        # df.loc[idx, 'hueMean'] = np.mean(image_hsv[:, :, 0])
-        # df.loc[idx, 'hueStd'] = np.std(image_hsv[:, :, 0])
+        df.loc[idx, 'hueMean'] = np.mean(image_hsv[:, :, 0])
+        df.loc[idx, 'hueStd'] = np.std(image_hsv[:, :, 0])
         # df.loc[idx, 'saturationMean'] = np.mean(image_hsv[:, :, 1])
         # df.loc[idx, 'saturationStd'] = np.std(image_hsv[:, :, 1])
         # df.loc[idx, 'brightnessMean'] = np.mean(image_hsv[:, :, 2])
         # df.loc[idx, 'brightnessStd'] = np.std(image_hsv[:, :, 2])
 
         # # Grayscale
-        # df.loc[idx, 'greyscaleMean'] = np.mean(image_gray)
-        # df.loc[idx, 'greyscaleStd'] = np.std(image_gray)
+        df.loc[idx, 'greyscaleMean'] = np.mean(image_gray)
+        df.loc[idx, 'greyscaleStd'] = np.std(image_gray)
 
         # # Shannon entropy
-        # df.loc[idx, 'shannonEntropy'] = measure.shannon_entropy(image_gray)
+        df.loc[idx, 'shannonEntropy'] = measure.shannon_entropy(image_gray)
 
     return df

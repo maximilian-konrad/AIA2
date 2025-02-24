@@ -10,7 +10,6 @@ from fpdf import FPDF
 
 # Project-specific imports
 from ..core.basic_img_features import extract_basic_image_features  # Function to extract basic features from images
-from ..core.nima_neural_image_assessment import neural_image_assessment  # Function to extract NIMA neural image assessment
 from ..core.blur_detection import extract_blur_value # Function to extract blur value
 from ..core.noise_detection import estimate_noise # Function to extract noise value
 from ..core.contrast_of_brightness import calculate_contrast_of_brightness # Function to calculate contrast of brightness
@@ -72,19 +71,18 @@ class AIA:
 
         # List of feature extractor functions
         feature_extractors = [
-            # extract_basic_image_features,
-            # neural_image_assessment,
-            # extract_blur_value,
-            # estimate_noise,
-            # calculate_contrast_of_brightness,
-            # calculate_image_clarity,
-            # calculate_hue_proportions,
-            # calculate_salient_region_features,
-            # detect_coco_labels_yolo11,
-            # get_color_features,
-            # get_composition_features,
-            # get_figure_ground_relationship_features
-            calculate_aesthetic_scores
+            extract_basic_image_features,
+            extract_blur_value,
+            estimate_noise,
+            calculate_contrast_of_brightness,
+            calculate_image_clarity,
+            calculate_hue_proportions,
+            calculate_salient_region_features,
+            detect_coco_labels_yolo11,
+            get_color_features,
+            get_composition_features,
+            get_figure_ground_relationship_features
+            # calculate_aesthetic_scores
         ]
 
         print(f"Processing batch of n={len(df_images)} images")
@@ -148,6 +146,12 @@ class AIA:
 
         # Initialize PDF
         pdf = FPDF(orientation='L', unit='mm', format='letter')
+        # Get page dimensions (letter size in landscape)
+        page_width = 279.4  # mm
+        page_height = 215.9  # mm
+        margin = 10  # mm
+        gap = 5  # mm gap between left and right halves
+        half_width = (page_width - 2 * margin - gap) / 2  # Adjusted to account for gap
 
         # Iterate over each feature
         features = df.columns[1:]  # Assuming first column is filename
@@ -162,16 +166,66 @@ class AIA:
             min_image = df.loc[df[feature].idxmin()]['filename']
             max_image = df.loc[df[feature].idxmax()]['filename']
 
-            # Add min image
+            def scale_image(img_path):
+                """Helper function to calculate scaled dimensions"""
+                if not os.path.exists(img_path):
+                    return None, None
+                
+                from PIL import Image
+                with Image.open(img_path) as img:
+                    img_w, img_h = img.size
+                    img_aspect = img_w / img_h
+                    
+                    # Calculate dimensions to fit half page width and full height
+                    width_based = half_width
+                    height_based = page_height - 40  # Account for margins and text
+                    
+                    # Calculate both possible dimensions
+                    if width_based / img_aspect <= height_based:
+                        # Width is the limiting factor
+                        return width_based, width_based / img_aspect
+                    else:
+                        # Height is the limiting factor
+                        return height_based * img_aspect, height_based
+
+            # Add image labels on same line
             pdf.set_font("Arial", size=10)
-            pdf.cell(0, 10, txt=f"Min Image: {os.path.basename(min_image)}", ln=True, align='L')
-            if os.path.exists(min_image):
-                pdf.image(min_image, x=10, y=pdf.get_y(), w=90)
+            min_value = df.loc[df[feature].idxmin()][feature]
+            max_value = df.loc[df[feature].idxmax()][feature]
             
-            # Add max image
-            pdf.cell(0, 10, txt=f"Max Image: {os.path.basename(max_image)}", ln=True, align='R')
+            # Calculate widths for left and right text cells
+            left_text = f"Min Image: {os.path.basename(min_image)} (Value: {min_value:.4f})"
+            right_text = f"Max Image: {os.path.basename(max_image)} (Value: {max_value:.4f})"
+            
+            # Print both texts on same line, both left-aligned
+            pdf.cell(half_width + margin, 10, txt=left_text, ln=0, align='L')
+            pdf.cell(half_width + margin, 10, txt=right_text, ln=1, align='L')
+
+            # Store the Y position after text for both images to ensure alignment
+            image_start_y = pdf.get_y()
+
+            # Add images
+            if os.path.exists(min_image):
+                w, h = scale_image(min_image)
+                if w and h:
+                    # Center in left half
+                    x = margin + (half_width - w) / 2
+                    y = image_start_y + (page_height - image_start_y - h) / 2
+                    pdf.image(min_image, x=x, y=y, w=w, h=h)
+
             if os.path.exists(max_image):
-                pdf.image(max_image, x=110, y=pdf.get_y() - 10, w=90)  # Adjust y to align with min image
+                w, h = scale_image(max_image)
+                if w and h:
+                    # Center in right half (with gap)
+                    x = margin + half_width + gap + (half_width - w) / 2
+                    y = image_start_y + (page_height - image_start_y - h) / 2
+                    pdf.image(max_image, x=x, y=y, w=w, h=h)
+
+            # Add footer text
+            pdf.set_y(2)  # Move to 20mm from bottom
+            pdf.set_font("Arial", size=12)
+            pdf.cell(0, 10, txt="Images analyzed with AIA2", ln=True, align='C')
 
         # Save the PDF
         pdf.output(os.path.join(self.output_dir, output_pdf_path))
+        print(f"PDF saved to: {os.path.join(self.output_dir, output_pdf_path)}")

@@ -15,7 +15,6 @@ def extract_blur_value(df_images):
     # Iterate over all images using enumerate on the DataFrame column
     for idx, image_path in enumerate(tqdm(df_images['filename'])):
 
-
         image = cv2.imread(image_path)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 

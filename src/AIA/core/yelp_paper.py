@@ -31,7 +31,7 @@ import cv2
 from tqdm import tqdm
 import numpy as np
 import pywt
-from src.AIA.utils.load_config import load_config
+from ..utils.load_config import load_config
 
 def get_color_features(df_images):
     """
@@ -59,8 +59,8 @@ def get_color_features(df_images):
     raw_colorfulness_list = []
 
     # Initialize new columns with NaN
-    df['brightness'] = np.nan
-    df['saturation'] = np.nan
+    df['brightnessMean'] = np.nan
+    df['saturationMean'] = np.nan
     df['contrast'] = np.nan
     df['clarity'] = np.nan
     df['warmHue'] = np.nan
@@ -114,8 +114,8 @@ def get_color_features(df_images):
         raw_colorfulness_list.append(colorfulness_raw)
 
         # Store computed features in DataFrame
-        df.loc[idx, 'brightness'] = brightness_val
-        df.loc[idx, 'saturation'] = saturation_val
+        df.loc[idx, 'brightnessMean'] = brightness_val
+        df.loc[idx, 'saturationMean'] = saturation_val
         df.loc[idx, 'contrast'] = contrast_val
         df.loc[idx, 'clarity'] = clarity_val
         df.loc[idx, 'warmHue'] = warmHue_val
