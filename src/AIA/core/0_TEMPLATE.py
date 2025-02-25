@@ -3,10 +3,8 @@ Add general comments here.
 """
 
 # Imports
-import cv2
 from tqdm import tqdm
 import numpy as np
-import pywt
 from ..utils.load_config import load_config
 
 def function_name(df_images):

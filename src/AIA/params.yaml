@@ -1,0 +1,62 @@
+general:
+  input_dir: {}
+  output_dir: {}
+  summary_stats: {}
+
+features:
+  extract_basic_image_features:
+    active: false
+    parameters: {}
+
+  neural_image_assessment:
+    active: false
+    parameters: {}
+
+  extract_blur_value:
+    active: false
+    parameters: {}
+
+  estimate_noise:
+    active: false
+    parameters: {}
+
+  calculate_contrast_of_brightness:
+    active: false
+    parameters: {}
+
+  calculate_image_clarity:
+    active: false
+    parameters: {}
+
+  calculate_hue_proportions:
+    active: false
+    parameters: {}
+
+  calculate_salient_region_features:
+    active: false
+    parameters: {}
+
+  detect_coco_labels_yolo11:
+    active: false
+    parameters: {}
+
+  get_color_features:
+    active: false
+    parameters: {}
+
+  get_composition_features:
+    active: false
+    parameters: {}
+
+  get_figure_ground_relationship_features:
+    active: false
+    parameters: {}
+
+  calculate_aesthetic_scores:
+    active: false
+    parameters: {}
+
+  extract_text_ocr:
+    active: true
+    parameters:
+      windows_path_to_tesseract: 'C:\\Users\\ge53hed\\AppData\\Local\\Tesseract-OCR\\tesseract.exe' 

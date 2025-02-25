@@ -19,6 +19,7 @@ from ..core.salient_region_features import calculate_salient_region_features # F
 from ..core.get_coco_labels import detect_coco_labels_yolo11 # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
 from ..core.yelp_paper import get_color_features, get_composition_features, get_figure_ground_relationship_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
 from ..core.nima_idealo import calculate_aesthetic_scores # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
+from ..core.ocr import get_ocr_text # Function to extract text from images using OCR
 
 class AIA:
     """
@@ -72,16 +73,17 @@ class AIA:
         # List of feature extractor functions
         feature_extractors = [
             extract_basic_image_features,
-            extract_blur_value,
-            estimate_noise,
-            calculate_contrast_of_brightness,
-            calculate_image_clarity,
-            calculate_hue_proportions,
-            calculate_salient_region_features,
-            detect_coco_labels_yolo11,
-            get_color_features,
-            get_composition_features,
-            get_figure_ground_relationship_features
+            # extract_blur_value,
+            # estimate_noise,
+            # calculate_contrast_of_brightness,
+            # calculate_image_clarity,
+            # calculate_hue_proportions,
+            # calculate_salient_region_features,
+            # detect_coco_labels_yolo11,
+            # get_color_features,
+            # get_composition_features,
+            # get_figure_ground_relationship_features,
+            get_ocr_text
             # calculate_aesthetic_scores
         ]
 
