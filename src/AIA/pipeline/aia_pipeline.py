@@ -16,7 +16,7 @@ from ..core.contrast_of_brightness import calculate_contrast_of_brightness # Fun
 from ..core.image_clarity import calculate_image_clarity # Function to calculate image clarity
 from ..core.warm_cold_hue import calculate_hue_proportions # Function to calculate warm hue proportion and cold hue proportion
 from ..core.salient_region_features import calculate_salient_region_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
-from ..core.yolo import predict_coco_labels_yolo11 # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
+from ..core.yolo import predict_coco_labels_yolo11, predict_imagenet_classes_yolo11 # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
 from ..core.yelp_paper import get_color_features, get_composition_features, get_figure_ground_relationship_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
 from ..core.nima_idealo import calculate_aesthetic_scores # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
 from ..core.ocr import get_ocr_text # Function to extract text from images using OCR
@@ -79,7 +79,8 @@ class AIA:
             # calculate_image_clarity,
             # calculate_hue_proportions,
             # calculate_salient_region_features,
-            predict_coco_labels_yolo11,
+            # predict_coco_labels_yolo11,
+            predict_imagenet_classes_yolo11, 
             # get_color_features,
             # get_composition_features,
             # get_figure_ground_relationship_features,
@@ -113,8 +114,21 @@ class AIA:
 
         # Create an Excel writer object
         with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
-            # Save the main results to the first sheet
-            df_results.to_excel(writer, sheet_name='Raw Data', index=False)
+            # Check if the DataFrame exceeds Excel's column limit (16,384 columns)
+            if df_results.shape[1] > 16384:
+                # Create a message DataFrame to inform the user
+                message_df = pd.DataFrame({
+                    'Message': ['The results contain more than 16,384 columns, which exceeds Excel\'s limit.',
+                               'Please refer to the CSV file for the complete results.']
+                })
+                message_df.to_excel(writer, sheet_name='Raw Data', index=False)
+            else:
+                # Save the main results to the first sheet if within Excel's limits
+                df_results.to_excel(writer, sheet_name='Raw Data', index=False)
+            
+            # Also save as CSV with UTF-8 encoding
+            csv_path = os.path.splitext(output_path)[0] + '.csv'
+            df_results.to_csv(csv_path, index=False, encoding='utf-8')
             
             # If summary statistics are requested, create and save them
             if self.incl_summary_stats:
