@@ -4,6 +4,68 @@ import os
 from tqdm import tqdm
 from ..utils.helper_functions import download_weights
 from ultralytics import YOLO
+import pandas as pd
+import torch
+
+def predict_imagenet_classes_yolo11(df_images):
+    """
+    Predicts ImageNet classes in a list of images using YOLO11 classification model.
+
+    :param df_images: DataFrame containing image filenames.
+    :return: A DataFrame containing ImageNet labels and their prediction probabilities for each image.
+    """
+    # Create a copy of the input DataFrame to store results
+    df = df_images.copy()
+    
+    # Dictionary to collect all class probabilities before creating DataFrame
+    all_probs = {}
+    
+    # Check if weights are downloaded already, otherwise download them
+    download_weights(
+        weight_filename='yolo11n-cls.pt', 
+        weight_url='https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n-cls.pt'
+    )
+
+    # Load the YOLO11 classification model
+    model = YOLO('../AIA/weights/yolo11n-cls.pt')
+    
+    # # Set device to CUDA if available using PyTorch's detection
+    # if torch.cuda.is_available():
+    #     model.to('cuda')  # Move model to GPU
+    
+    # Initialize progress bar
+    for idx, image_path in enumerate(tqdm(df_images['filename'])):
+        # Load image
+        img = cv.imread(image_path)
+        if img is None:
+            print(f"Could not read image {image_path}")
+            continue
+
+        # Perform inference with the classification model
+        # Set verbose=False to suppress the speed/processing messages
+        results = model(img, verbose=False)
+        
+        # Process classification results
+        for result in results:
+            # Get the probs attribute which contains probabilities for all classes
+            probs = result.probs
+            
+            # Add all class probabilities to our temporary dictionary
+            for i, prob in enumerate(probs.data.tolist()):
+                class_name = result.names[i]  # Get actual class name like 'dog'
+                column_name = f"imagenet_{class_name}"  # Format as imagenet_dog
+                
+                if column_name not in all_probs:
+                    all_probs[column_name] = [0.0] * len(df_images)  # Initialize with zeros for all images
+                
+                all_probs[column_name][idx] = prob
+    
+    # Create a DataFrame from the collected probabilities and join with original DataFrame
+    probs_df = pd.DataFrame(all_probs)
+    result_df = pd.concat([df, probs_df], axis=1)
+    
+    return result_df
+
 
 def predict_coco_labels_yolo11(df_images):
     """
@@ -40,7 +102,7 @@ def predict_coco_labels_yolo11(df_images):
             continue
 
         # Perform inference
-        results = model(img)
+        results = model(img, verbose=False)
 
         # Analyze the outputs
         for result in results:
