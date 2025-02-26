@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 import tensorflow as tf
-from src.AIA.utils.helper_functions import download_weights
+from ..utils.helper_functions import download_weights
 
 def calculate_aesthetic_scores(df_images):
     """
