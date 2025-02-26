@@ -16,7 +16,7 @@ from ..core.contrast_of_brightness import calculate_contrast_of_brightness # Fun
 from ..core.image_clarity import calculate_image_clarity # Function to calculate image clarity
 from ..core.warm_cold_hue import calculate_hue_proportions # Function to calculate warm hue proportion and cold hue proportion
 from ..core.salient_region_features import calculate_salient_region_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
-from ..core.yolo import detect_coco_labels_yolo11 # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
+from ..core.yolo import predict_coco_labels_yolo11 # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
 from ..core.yelp_paper import get_color_features, get_composition_features, get_figure_ground_relationship_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
 from ..core.nima_idealo import calculate_aesthetic_scores # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
 from ..core.ocr import get_ocr_text # Function to extract text from images using OCR
@@ -72,18 +72,18 @@ class AIA:
 
         # List of feature extractor functions
         feature_extractors = [
-            extract_basic_image_features,
+            # extract_basic_image_features,
             # extract_blur_value,
             # estimate_noise,
             # calculate_contrast_of_brightness,
             # calculate_image_clarity,
             # calculate_hue_proportions,
             # calculate_salient_region_features,
-            # detect_coco_labels_yolo11,
+            predict_coco_labels_yolo11,
             # get_color_features,
             # get_composition_features,
             # get_figure_ground_relationship_features,
-            get_ocr_text
+            #get_ocr_text
             # calculate_aesthetic_scores
         ]
 
@@ -120,24 +120,39 @@ class AIA:
             if self.incl_summary_stats:
                 # Calculate summary statistics for numeric columns only
                 numeric_cols = df_results.select_dtypes(include=['int64', 'float64']).columns
-                summary_stats = df_results[numeric_cols].agg([
-                    'count',
-                    'mean',
-                    'std',
-                    'min',
-                    'max'
-                ])
+                
+                # Only calculate stats if there are numeric columns
+                if len(numeric_cols) > 0:
+                    summary_stats = df_results[numeric_cols].agg([
+                        'count',
+                        'mean',
+                        'std',
+                        'min',
+                        'max'
+                    ])
+                else:
+                    summary_stats = pd.DataFrame()
 
                 # Calculate count and percentage for binary columns
                 binary_cols = df_results.select_dtypes(include=['bool']).columns
-                binary_stats = df_results[binary_cols].agg(['sum', 'count'])
-                binary_stats.loc['share'] = binary_stats.loc['sum'] / binary_stats.loc['count']
-
-                # Combine numeric and binary statistics
-                combined_stats = pd.concat([summary_stats.transpose(), binary_stats.transpose()], axis=0)
-
-                # Save combined statistics to a single sheet
-                combined_stats.to_excel(writer, sheet_name='Summary Statistics')
+                
+                # Only calculate stats if there are binary columns
+                if len(binary_cols) > 0:
+                    binary_stats = df_results[binary_cols].agg(['sum', 'count'])
+                    binary_stats.loc['share'] = binary_stats.loc['sum'] / binary_stats.loc['count']
+                    
+                    # Combine numeric and binary statistics if both exist
+                    if not summary_stats.empty:
+                        combined_stats = pd.concat([summary_stats.transpose(), binary_stats.transpose()], axis=0)
+                    else:
+                        combined_stats = binary_stats.transpose()
+                else:
+                    # If no binary columns, just use the numeric stats
+                    combined_stats = summary_stats.transpose() if not summary_stats.empty else pd.DataFrame()
+                
+                # Only save statistics if we have any
+                if not combined_stats.empty:
+                    combined_stats.to_excel(writer, sheet_name='Summary Statistics')
         
         print(f"Results saved to: {output_path}")
 

@@ -5,12 +5,12 @@ from tqdm import tqdm
 from ..utils.helper_functions import download_weights
 from ultralytics import YOLO
 
-def detect_coco_labels_yolo11(df_images):
+def predict_coco_labels_yolo11(df_images):
     """
-    Detects COCO labels in a list of images.
+    Predicts COCO labels in a list of images.
 
     :param image_pats: Path to image file.
-    :return: A list of dictionaries, each containing COCO labels and their presence for each image.
+    :return: A DataFrame containing COCO labels and their prediction probabilities for each image.
     """
 
     # Create a copy of the input DataFrame to store results
@@ -28,7 +28,7 @@ def detect_coco_labels_yolo11(df_images):
 
     # Initialize columns for each class
     for label in classes:
-        df[label] = False
+        df[label] = 0.0  # Initialize with 0.0 instead of False
 
     # Iterate over all images using enumerate on the DataFrame column
     for idx, image_path in enumerate(tqdm(df_images['filename'])):
@@ -46,18 +46,19 @@ def detect_coco_labels_yolo11(df_images):
         for result in results:
             for detection in result.boxes:
                 class_id = int(detection.cls)
-                confidence = detection.conf
-                if confidence > 0.5:  # Confidence threshold
-                    df.at[idx, classes[class_id]] = True
+                confidence = float(detection.conf)
+                # Store the highest confidence if multiple detections of the same class
+                if confidence > df.at[idx, classes[class_id]]:
+                    df.at[idx, classes[class_id]] = confidence
 
     return df
 
-def detect_coco_labels_yolo_v3(df_images):
+def predict_coco_labels_yolo_v3(df_images):
     """
-    Detects COCO labels in a list of images.
+    Predicts COCO labels in a list of images.
 
     :param image_pats: Path to image file.
-    :return: A list of dictionaries, each containing COCO labels and their presence for each image.
+    :return: A DataFrame containing COCO labels and their prediction probabilities for each image.
     """
 
     # Create a copy of the input DataFrame to store results
@@ -85,7 +86,7 @@ def detect_coco_labels_yolo_v3(df_images):
 
     # Initialize columns for each class
     for label in classes:
-        df[label] = False
+        df[label] = 0.0  # Initialize with 0.0 instead of False
 
     # Iterate over all images using enumerate on the DataFrame column
     for idx, image_path in enumerate(tqdm(df_images['filename'])):
@@ -94,7 +95,7 @@ def detect_coco_labels_yolo_v3(df_images):
         img = cv.imread(image_path)
         if img is None:
             print(f"Could not read image {image_path}")
-            return
+            continue  # Changed from return to continue to process remaining images
 
         # Prepare the image for the model
         blob = cv.dnn.blobFromImage(img, 1/255.0, (416, 416), swapRB=True, crop=False)
@@ -112,8 +113,9 @@ def detect_coco_labels_yolo_v3(df_images):
             for detection in out:
                 scores = detection[5:]
                 class_id = np.argmax(scores)
-                confidence = scores[class_id]
-                if confidence > 0.5:  # Confidence threshold
-                    df.at[idx, classes[class_id]] = True
+                confidence = float(scores[class_id])
+                # Store the highest confidence if multiple detections of the same class
+                if confidence > df.at[idx, classes[class_id]]:
+                    df.at[idx, classes[class_id]] = confidence
 
     return df
