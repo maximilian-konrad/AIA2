@@ -28,13 +28,11 @@ def calculate_salient_region_features(df_images):
     df = df_images.copy()
 
     # Check for CUDA availability
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"Using device: {device}")
 
     # Load the DeepLabV3 pre-trained model for saliency detection
-    model = models.segmentation.deeplabv3_resnet101(weights=True)
-    model.eval()
-    model.to(device)  # Move model to GPU if available
+    model = models.segmentation.deeplabv3_resnet101(weights=True).eval().to(device)  # Move model to GPU if available
 
     # Iterate over all images using enumerate on the DataFrame column
     for idx, image_path in enumerate(tqdm(df_images['filename'])):
@@ -55,7 +53,7 @@ def calculate_salient_region_features(df_images):
             predictions = torch.argmax(output, dim=0).cpu().numpy()
 
         # Free up CUDA memory
-        if device.type == 'cuda':
+        if device == 'cuda':
             torch.cuda.empty_cache()
 
         # Identify key region (saliency mask)

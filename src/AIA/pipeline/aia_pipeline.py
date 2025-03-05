@@ -85,9 +85,9 @@ class AIA:
             calculate_image_clarity,
             calculate_hue_proportions,
             calculate_salient_region_features,
-            # predict_coco_labels_yolo11, # TODO: fix this
+            predict_coco_labels_yolo11,
             predict_imagenet_classes_yolo11, 
-            # get_color_features, # TODO: fix saliency issue
+            get_color_features,
             get_composition_features,
             get_figure_ground_relationship_features,
             get_ocr_text,
