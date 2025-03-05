@@ -2,6 +2,7 @@
 import os  # Operating system dependent functionality
 import sys  # Access to system-specific parameters and functions
 import time
+import torch
 
 # Third-party library imports
 from tqdm import tqdm  # Progress bar for loops
@@ -9,6 +10,7 @@ import pandas as pd  # Data manipulation and analysis
 from fpdf import FPDF
 
 # Project-specific imports
+from ..utils.helper_functions import load_config
 from ..core.basic_img_features import extract_basic_image_features  # Function to extract basic features from images
 from ..core.blur_detection import extract_blur_value # Function to extract blur value
 from ..core.noise_detection import estimate_noise # Function to extract noise value
@@ -20,6 +22,8 @@ from ..core.yolo import predict_coco_labels_yolo11, predict_imagenet_classes_yol
 from ..core.yelp_paper import get_color_features, get_composition_features, get_figure_ground_relationship_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
 from ..core.nima_idealo import calculate_aesthetic_scores # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
 from ..core.ocr import get_ocr_text # Function to extract text from images using OCR
+from ..core.ov_object_detection import detect_objects # Function to detect objects in images
+from ..core.visual_complexity import visual_complexity # Function to detect objects in images
 
 class AIA:
     """
@@ -43,6 +47,7 @@ class AIA:
         
         # Store configuration and set up output directory
         self.config = config
+        self.full_config = load_config()
         self.output_dir = config.get('output_dir', None)
         
         # If no output directory is specified, use a default path
@@ -51,6 +56,7 @@ class AIA:
             os.makedirs(self.output_dir, exist_ok=True)  # Create the directory if it doesn't exist
 
         # Optional configuration parameters with default values
+        self.cuda_availability = torch.cuda.is_available()
         self.resize_percent = config.get('resize_percent', 100)
         self.evaluate_brisque = config.get('evaluate_brisque', False)
         self.evaluate_sharpness = config.get('evaluate_sharpness', False)
@@ -72,20 +78,22 @@ class AIA:
 
         # List of feature extractor functions
         feature_extractors = [
-            # extract_basic_image_features,
-            # extract_blur_value,
-            # estimate_noise,
-            # calculate_contrast_of_brightness,
-            # calculate_image_clarity,
-            # calculate_hue_proportions,
-            # calculate_salient_region_features,
-            # predict_coco_labels_yolo11,
+            extract_basic_image_features,
+            extract_blur_value,
+            estimate_noise,
+            calculate_contrast_of_brightness,
+            calculate_image_clarity,
+            calculate_hue_proportions,
+            calculate_salient_region_features,
+            # predict_coco_labels_yolo11, # TODO: fix this
             predict_imagenet_classes_yolo11, 
-            # get_color_features,
-            # get_composition_features,
-            # get_figure_ground_relationship_features,
-            #get_ocr_text
-            # calculate_aesthetic_scores
+            # get_color_features, # TODO: fix saliency issue
+            get_composition_features,
+            get_figure_ground_relationship_features,
+            get_ocr_text,
+            calculate_aesthetic_scores,
+            detect_objects,
+            visual_complexity
         ]
 
         print(f"Processing batch of n={len(df_images)} images")
@@ -102,7 +110,7 @@ class AIA:
 
         return df_out
    
-    def save_results(self, df_results, output_path=None):
+    def save_results(self, df_results, output_path = None):
         """
         Save the processed results to an Excel file.
 

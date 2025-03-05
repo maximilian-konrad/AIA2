@@ -26,12 +26,11 @@ def predict_imagenet_classes_yolo11(df_images):
         weight_url='https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n-cls.pt'
     )
 
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Using device: {device}")
+
     # Load the YOLO11 classification model
-    model = YOLO('../AIA/weights/yolo11n-cls.pt')
-    
-    # # Set device to CUDA if available using PyTorch's detection
-    # if torch.cuda.is_available():
-    #     model.to('cuda')  # Move model to GPU
+    model = YOLO('../AIA/weights/yolo11n-cls.pt').to(device)
     
     # Initialize progress bar
     for idx, image_path in enumerate(tqdm(df_images['filename'])):

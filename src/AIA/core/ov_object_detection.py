@@ -1,14 +1,21 @@
-import requests
 import torch
 from PIL import Image
 from transformers import AutoProcessor, AutoModelForCausalLM
 import pandas as pd
 from tqdm import tqdm
+from ..utils.helper_functions import load_config
 
-def detect_objects(df_images, objects_to_detect):
+def detect_objects(df_images):
+
+    # Load the full configuration directly from params.yaml
+    full_config = load_config()
+    objects_to_detect = full_config.get("features", {}).get("detect_objects", {}).get("parameters", {}).get("objects_to_detect", [])
+    print(f"Objects to detect: {objects_to_detect}")
+
     df = df_images.copy()
     
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    print(f"Using device: {device}")
     
     model = AutoModelForCausalLM.from_pretrained("microsoft/Florence-2-base", trust_remote_code=True).to(device)
     processor = AutoProcessor.from_pretrained("microsoft/Florence-2-base", trust_remote_code=True)

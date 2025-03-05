@@ -20,6 +20,6 @@ def visual_complexity(df_images):
         threshold = rp_tot / 25000
         r_spt = sum(1 for region in regions if region.area > threshold)
 
-        df.loc[idx, 'complexity'] = r_spt
+        df.loc[idx, 'visualComplexity'] = r_spt
         
     return df

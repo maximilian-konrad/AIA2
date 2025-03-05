@@ -9,8 +9,8 @@ import pytesseract
 import os
 import platform
 import traceback
-import yaml
 from langdetect import detect, LangDetectException
+from ..utils.helper_functions import load_config
 
 def get_ocr_text(df_images):
     """
@@ -21,15 +21,9 @@ def get_ocr_text(df_images):
     """
 
     # Load the full configuration directly from params.yaml
-    try:
-        with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'params.yaml'), 'r') as file:
-            full_config = yaml.safe_load(file)
-        print("Loaded params.yaml directly")
-    except Exception as e:
-        print(f"Error loading params.yaml directly: {e}")
-        full_config = {}
+    full_config = load_config()
 
-    # Check if the system is Windows
+    # If system is windows, pass tesseract path
     if platform.system() == "Windows":
         try:
             tesseract_path = full_config.get("features", {}).get("extract_text_ocr", {}).get("parameters", {}).get("windows_path_to_tesseract")

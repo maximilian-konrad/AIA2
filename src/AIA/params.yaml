@@ -2,6 +2,7 @@ general:
   input_dir: {}
   output_dir: {}
   summary_stats: {}
+  verbose: False
 
 features:
   extract_basic_image_features:
@@ -52,9 +53,22 @@ features:
     active: false
     parameters: {}
 
+  detect_objects:
+    active: true
+    parameters: 
+      objects_to_detect:
+        - "person"
+        - "car"
+        - "bicycle"
+        - "motorcycle"
+        - "bus"
+        - "train"
+
   calculate_aesthetic_scores:
     active: false
-    parameters: {}
+    parameters:
+      weight_filename: "weights_mobilenet_aesthetic_0.07.hdf5"
+      weight_url: "https://github.com/idealo/image-quality-assessment/blob/master/models/MobileNet/weights_mobilenet_aesthetic_0.07.hdf5?raw=true"
 
   extract_text_ocr:
     active: true

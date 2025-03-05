@@ -1,6 +1,27 @@
 import urllib.request
 from tqdm import tqdm
 import os
+import yaml
+
+
+def load_config():
+    """
+    Loads the configuration from the params.yaml file.
+
+    :return: The configuration as a dictionary.
+    """
+
+    # Load the full configuration directly from params.yaml
+    try:
+        with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'params.yaml'), 'r') as file:
+            full_config = yaml.safe_load(file)
+        print("Loaded params.yaml directly")
+    except Exception as e:
+        print(f"Error loading params.yaml directly: {e}")
+        full_config = {}
+
+    return full_config
+
 def download_weights(weight_filename, weight_url):
     """
     Downloads model weights if they do not exist locally yet

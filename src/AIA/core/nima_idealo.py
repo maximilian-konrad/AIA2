@@ -3,7 +3,8 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 import tensorflow as tf
-from ..utils.helper_functions import download_weights
+from ..utils.helper_functions import download_weights, load_config
+import torch
 
 def calculate_aesthetic_scores(df_images):
     """
@@ -19,17 +20,20 @@ def calculate_aesthetic_scores(df_images):
     :param df_images: DataFrame with a column 'filename' containing paths to image files.
     :return: DataFrame with an additional column 'nima_score' containing the aesthetic scores.
     """
+
+    # Load the full configuration directly from params.yaml
+    full_config = load_config()
+    weight_filename= full_config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_filename")
+    weight_url= full_config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_url")
+
     # Create a copy of the input DataFrame to store results
     df = df_images.copy()
     
-    # Define the weight filename and download URL
-    weight_filename = "weights_mobilenet_aesthetic_0.07.hdf5"
-    weight_url = "https://github.com/idealo/image-quality-assessment/blob/master/models/MobileNet/weights_mobilenet_aesthetic_0.07.hdf5?raw=true"
-    
     # If the weight file is not present in the current directory, download it
-    if not os.path.exists(weight_filename):
-        print("Weights not found. Downloading them from the repository and saving to", weight_filename)
-        download_weights(weight_filename, weight_url)
+    download_weights(
+        weight_filename= weight_filename,
+        weight_url= weight_url
+    )
     
     # Construct the absolute path for the model weights (assuming they are stored in a 'weights' folder one level up)
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -71,7 +75,7 @@ def calculate_aesthetic_scores(df_images):
             image_input = np.expand_dims(image_norm, axis=0)
             
             # Predict the probability distribution over score bins (expected shape: [1, 10])
-            predictions = model.predict(image_input)
+            predictions = model.predict(image_input, verbose=False)
             p = predictions[0]
             
             # Compute the weighted sum as the aesthetic score: sum_{i=1}^{10} (i * p_i)
