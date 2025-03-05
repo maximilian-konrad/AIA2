@@ -162,6 +162,8 @@ cython_debug/
 #.idea/
 
 
+Thumbs.db
+DS_Store
 outputs/*
 src/AIA/weights/*
 impl.py
