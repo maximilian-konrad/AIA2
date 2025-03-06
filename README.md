@@ -31,17 +31,30 @@ To set up the Conda environment, follow these steps:
 
 ### Run the pipeline
 
-Option A: **Use the webapp**:
-    Run app.py in ./
-
-    Open http://127.0.0.1:5000 and upload your images. 
-    Once completed, the results will be available for download.
-
-Option B: **Use the Jupyter notebook**:
+Option A: **Use the Jupyter notebook**:
 
     Run pipeline.ipynb in ./src/notebooks/
 
     Results will be stored as .XLSX file in ./outputs/
 
-### TODO
-update nima predictor to GPU version
+Option B: **INSTABLE: Use the webapp**:
+    Run app.py in ./
+
+    Open http://127.0.0.1:5000 and upload your images. 
+    Once completed, the results will be available for download.
+
+## Contributing
+
+If you contributed and made any changes to the environment, please update the env.yml file to allow others to deploy this package easily.
+You can do so by running the following command:
+
+```bash
+conda env  export --no-builds > env.yml
+```
+
+Typically, this will add a system-specific line (e.g., `prefix: C:\Users\user1\.conda\envs\aia`) at the end of the env.yml file.
+You can remove this line.
+
+Please ensure to include the updated env.yml in your commit and pull request.
+
+
