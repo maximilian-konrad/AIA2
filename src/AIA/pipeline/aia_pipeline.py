@@ -104,23 +104,23 @@ class AIA:
         # Iterate over each function in the feature_extractors_df dataframe
         for idx, row in df_logs.iterrows():
             func = row['functions']
+            if row['active']:
+                print(f"### Processing {func.__name__}() ###")
+                tic = time.perf_counter()
+                # Execute function
+                df_temp = func(self, df_images)
+                # Append results to dataframe
+                df_out = df_out.merge(df_temp, on='filename', how='left')
+                toc = time.perf_counter()
+                print(f"{toc - tic:.4f} seconds needed")
 
-            print(f"### Processing {func.__name__}() ###")
-            tic = time.perf_counter()
-            # Execute function
-            df_temp = func(self, df_images)
-            # Append results to dataframe
-            df_out = df_out.merge(df_temp, on='filename', how='left')
-            toc = time.perf_counter()
-            print(f"{toc - tic:.4f} seconds needed")
+                # Save time needed
+                df_logs.at[idx, 'seconds_needed'] = toc - tic
 
-            # Save time needed
-            df_logs.at[idx, 'seconds_needed'] = toc - tic
-
-            # Run GC and empty cuda cache
-            if self.cuda_availability:
-                torch.cuda.empty_cache()
-            gc.collect()
+                # Run GC and empty cuda cache
+                if self.cuda_availability:
+                    torch.cuda.empty_cache()
+                gc.collect()
 
         print(f"### Finished batch of n={len(df_images)} images ###")
 
@@ -215,7 +215,20 @@ class AIA:
         print(f"### - {f'{self.timestamp}_logs.csv'} ###")
         print(f"### - {f'{self.timestamp}_logs.xlsx'} ###")
 
-    def generate_pdf_from_excel(self, excel_path, output_pdf_path):
+    def generate_pdf_from_excel(self, excel_path = None, output_pdf_path = None):
+        """
+        Generate a PDF from an Excel file.
+
+        :param excel_path: The path to the Excel file.
+        :param output_pdf_path: The path to save the PDF file.
+        """        
+        
+        if excel_path is None:
+            excel_path = f'{self.timestamp}_results.xlsx'
+        print(f"### Excel not specified. Using data from current run: {excel_path} ###")
+        if output_pdf_path is None:
+            output_pdf_path = f'{self.timestamp}_exemplary_images.pdf'
+
         # Load the Excel file
         xls = pd.ExcelFile(os.path.join(self.output_dir, excel_path))
         df = pd.read_excel(xls, sheet_name='Raw Data')
@@ -270,8 +283,16 @@ class AIA:
             max_value = df.loc[df[feature].idxmax()][feature]
             
             # Calculate widths for left and right text cells
-            left_text = f"Min Image: {os.path.basename(min_image)} (Value: {min_value:.4f})"
-            right_text = f"Max Image: {os.path.basename(max_image)} (Value: {max_value:.4f})"
+            # Check if values are numeric before formatting with .4f
+            if isinstance(min_value, (int, float)):
+                left_text = f"Min Image: {os.path.basename(min_image)} (Value: {min_value:.4f})"
+            else:
+                left_text = f"Min Image: {os.path.basename(min_image)} (Value: {min_value})"
+                
+            if isinstance(max_value, (int, float)):
+                right_text = f"Max Image: {os.path.basename(max_image)} (Value: {max_value:.4f})"
+            else:
+                right_text = f"Max Image: {os.path.basename(max_image)} (Value: {max_value})"
             
             # Print both texts on same line, both left-aligned
             pdf.cell(half_width + margin, 10, txt=left_text, ln=0, align='L')
@@ -282,6 +303,7 @@ class AIA:
 
             # Add images
             if os.path.exists(min_image):
+                # TODO: Implement webp support
                 w, h = scale_image(min_image)
                 if w and h:
                     # Center in left half
@@ -290,6 +312,7 @@ class AIA:
                     pdf.image(min_image, x=x, y=y, w=w, h=h)
 
             if os.path.exists(max_image):
+                # TODO: Implement webp support
                 w, h = scale_image(max_image)
                 if w and h:
                     # Center in right half (with gap)
@@ -304,4 +327,4 @@ class AIA:
 
         # Save the PDF
         pdf.output(os.path.join(self.output_dir, output_pdf_path))
-        print(f"PDF saved to: {os.path.join(self.output_dir, output_pdf_path)}")
+        print(f"### PDF saved to: {os.path.join(self.output_dir, output_pdf_path)} ###")

@@ -1,5 +1,5 @@
 general:
-  input_dir: '..\\..\\data\\test_ai_imgs_20\\'
+  input_dir: '..\\..\\data\\test_human_20\\'
   output_dir: '..\\..\\outputs\\'
   summary_stats:
     active: True
@@ -11,59 +11,59 @@ features:
     parameters: None
 
   neural_image_assessment:
-    active: True
+    active: False
     parameters: None
 
   extract_blur_value:
-    active: True
+    active: False
     parameters: None
 
   estimate_noise:
-    active: True
+    active: False
     parameters: None
 
   calculate_contrast_of_brightness:
-    active: True
+    active: False
     parameters: None
 
   calculate_image_clarity:
-    active: True
+    active: False
     parameters: None
 
   calculate_hue_proportions:
-    active: True
+    active: False
     parameters: None
 
   calculate_salient_region_features:
-    active: True
+    active: False
     parameters: None
 
   predict_coco_labels_yolo11:
-    active: True
+    active: False
     parameters: None
 
   predict_imagenet_classes_yolo11:
-    active: True
+    active: False
     parameters: None
 
   get_color_features:
-    active: True
+    active: False
     parameters: None
 
   get_composition_features:
-    active: True
+    active: False
     parameters: None
 
   get_figure_ground_relationship_features:
-    active: True
+    active: False
     parameters: None
 
   visual_complexity:
-    active: True
+    active: False
     parameters: None
 
   detect_objects:
-    active: True
+    active: False
     parameters: 
       objects_to_detect:
         - 'person'
@@ -74,12 +74,12 @@ features:
         - 'train'
 
   calculate_aesthetic_scores:
-    active: True
+    active: False
     parameters:
       weight_filename: 'weights_mobilenet_aesthetic_0.07.hdf5'
       weight_url: 'https://github.com/idealo/image-quality-assessment/blob/master/models/MobileNet/weights_mobilenet_aesthetic_0.07.hdf5?raw=true'
 
   get_ocr_text:
-    active: True
+    active: False
     parameters:
       windows_path_to_tesseract: 'C:\\Users\\ge53hed\\AppData\\Local\\Tesseract-OCR\\tesseract.exe' 
