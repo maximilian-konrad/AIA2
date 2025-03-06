@@ -10,13 +10,8 @@ OUTPUT_FOLDER = 'outputs'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# Initialize AIA with default config
-config = {
-    'resize_percent': 80,
-    'evaluate_brisque': True,
-    'evaluate_sharpness': True
-}
-aia = AIA(config)
+# Initialize AIA
+aia = AIA()
 
 @app.route('/', methods=['GET', 'POST'])
 def upload_file():

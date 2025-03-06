@@ -4,7 +4,7 @@ from PIL import Image
 import numpy as np
 from tqdm import tqdm
 
-def calculate_salient_region_features(df_images):
+def calculate_salient_region_features(self, df_images):
     """
     Calculate compositional and aesthetic features based on salient regions in images.
     Analyzes multiple aspects of image composition following photography principles.
@@ -15,6 +15,7 @@ def calculate_salient_region_features(df_images):
     3. Visual Balance Intensity: Measures the balance of brightness across the image
     4. Visual Balance Color: Assesses the distribution and balance of colors
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added columns:
             - diagonal_dominance: score for diagonal composition
@@ -27,12 +28,8 @@ def calculate_salient_region_features(df_images):
     # Create a copy of the input DataFrame to store results
     df = df_images.copy()
 
-    # Check for CUDA availability
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Using device: {device}")
-
     # Load the DeepLabV3 pre-trained model for saliency detection
-    model = models.segmentation.deeplabv3_resnet101(weights=True).eval().to(device)  # Move model to GPU if available
+    model = models.segmentation.deeplabv3_resnet101(weights=True).eval().to(self.device)
 
     # Iterate over all images using enumerate on the DataFrame column
     for idx, image_path in enumerate(tqdm(df_images['filename'])):
@@ -44,17 +41,13 @@ def calculate_salient_region_features(df_images):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         input_tensor = preprocess(image).unsqueeze(0)
-        input_tensor = input_tensor.to(device)  # Move input to GPU if available
+        input_tensor = input_tensor.to(self.device)
 
         # Perform saliency detection
         with torch.no_grad():
             output = model(input_tensor)['out'][0]
             # Move predictions back to CPU for numpy operations
             predictions = torch.argmax(output, dim=0).cpu().numpy()
-
-        # Free up CUDA memory
-        if device == 'cuda':
-            torch.cuda.empty_cache()
 
         # Identify key region (saliency mask)
         saliency_mask = (predictions > 0).astype(np.uint8)

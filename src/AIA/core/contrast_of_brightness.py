@@ -2,12 +2,13 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-def calculate_contrast_of_brightness(df_images):
+def calculate_contrast_of_brightness(self, df_images):
     """
     Calculate the contrast of brightness for each image by computing the standard deviation
     of pixel intensities. For color images, the RGB channels are averaged first.
     Higher values indicate more contrast in brightness levels across the image.
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added 'contrast_of_brightness' column containing the standard deviation
             of pixel intensities

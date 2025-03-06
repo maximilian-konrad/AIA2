@@ -4,7 +4,7 @@ import os
 import yaml
 
 
-def load_config():
+def load_config(params_path):
     """
     Loads the configuration from the params.yaml file.
 
@@ -13,14 +13,14 @@ def load_config():
 
     # Load the full configuration directly from params.yaml
     try:
-        with open(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'params.yaml'), 'r') as file:
-            full_config = yaml.safe_load(file)
-        print("Loaded params.yaml directly")
+        with open(params_path, 'r') as file:
+            config = yaml.safe_load(file)
+        print("Successfully loaded parameters from {params_path}.")
     except Exception as e:
-        print(f"Error loading params.yaml directly: {e}")
-        full_config = {}
+        print(f"Error loading parameters directly: {e}")
+        config = {}
 
-    return full_config
+    return config
 
 def download_weights(weight_filename, weight_url):
     """

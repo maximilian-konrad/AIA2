@@ -1,17 +1,16 @@
 import cv2
-from PIL import Image
 import numpy as np
 import os
-from scipy.stats import entropy
 from skimage import measure
 from tqdm import tqdm
 
-def extract_basic_image_features(df_images):
+def extract_basic_image_features(self, df_images):
     """
     Extract basic features from the images and add them as columns to the DataFrame.
     Features include: dimensions (height, width), file size, color statistics (RGB means),
     HSV color space metrics, grayscale mean, and Shannon entropy.
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added feature columns:
         - height: image height in pixels

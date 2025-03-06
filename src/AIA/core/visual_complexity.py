@@ -3,7 +3,14 @@ from skimage import io, filters
 from skimage.measure import regionprops, label
 from tqdm import tqdm
 
-def visual_complexity(df_images):
+def visual_complexity(self, df_images):
+    """
+    Calculate the visual complexity of each image by counting the number of regions in the binary image.
+
+    :param self: AIA object
+    :param df_images: DataFrame containing a 'filename' column with paths to image files
+    :return: DataFrame with added 'visualComplexity' column containing the number of regions
+    """
     df = df_images.copy()
     
     for idx, input_image_path in enumerate(tqdm(df_images['filename'])):

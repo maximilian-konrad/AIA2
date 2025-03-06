@@ -1,11 +1,12 @@
 import cv2
 from tqdm import tqdm
 
-def extract_blur_value(df_images):
+def extract_blur_value(self, df_images):
     """
     Calculate the blur value for each image using Laplacian variance.
     A lower value (< 100) indicates a blurry image, while higher values indicate sharper images.
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added 'blur' column containing the Laplacian variance score
     """

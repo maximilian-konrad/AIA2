@@ -1,16 +1,15 @@
 import cv2 as cv
 import numpy as np
-import os
 from tqdm import tqdm
 from ..utils.helper_functions import download_weights
 from ultralytics import YOLO
 import pandas as pd
-import torch
 
-def predict_imagenet_classes_yolo11(df_images):
+def predict_imagenet_classes_yolo11(self, df_images):
     """
     Predicts ImageNet classes in a list of images using YOLO11 classification model.
 
+    :param self: AIA object
     :param df_images: DataFrame containing image filenames.
     :return: A DataFrame containing ImageNet labels and their prediction probabilities for each image.
     """
@@ -26,11 +25,8 @@ def predict_imagenet_classes_yolo11(df_images):
         weight_url='https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n-cls.pt'
     )
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"Using device: {device}")
-
     # Load the YOLO11 classification model
-    model = YOLO('../AIA/weights/yolo11n-cls.pt').to(device)
+    model = YOLO('../AIA/weights/yolo11n-cls.pt').to(self.device)
     
     # Initialize progress bar
     for idx, image_path in enumerate(tqdm(df_images['filename'])):
@@ -66,10 +62,11 @@ def predict_imagenet_classes_yolo11(df_images):
     return result_df
 
 
-def predict_coco_labels_yolo11(df_images):
+def predict_coco_labels_yolo11(self, df_images):
     """
     Predicts COCO labels in a list of images.
 
+    :param self: AIA object
     :param image_pats: Path to image file.
     :return: A DataFrame containing COCO labels and their prediction probabilities for each image.
     """
@@ -114,10 +111,11 @@ def predict_coco_labels_yolo11(df_images):
 
     return df
 
-def predict_coco_labels_yolo_v3(df_images):
+def predict_coco_labels_yolo_v3(self, df_images):
     """
     Predicts COCO labels in a list of images.
 
+    :param self: AIA object
     :param image_pats: Path to image file.
     :return: A DataFrame containing COCO labels and their prediction probabilities for each image.
     """

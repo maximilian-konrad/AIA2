@@ -3,10 +3,9 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 import tensorflow as tf
-from ..utils.helper_functions import download_weights, load_config
-import torch
+from ..utils.helper_functions import download_weights
 
-def calculate_aesthetic_scores(df_images):
+def calculate_aesthetic_scores(self, df_images):
     """
     Calculates the aesthetic scores for a list of images using a MobileNet-based NIMA model.
     
@@ -17,14 +16,14 @@ def calculate_aesthetic_scores(df_images):
       - The aesthetic score is computed as the weighted sum: sum_{i=1}^{10} (i * p_i),
         where p_i is the predicted probability for score bin i.
     
+    :param self: AIA object
     :param df_images: DataFrame with a column 'filename' containing paths to image files.
     :return: DataFrame with an additional column 'nima_score' containing the aesthetic scores.
     """
 
-    # Load the full configuration directly from params.yaml
-    full_config = load_config()
-    weight_filename= full_config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_filename")
-    weight_url= full_config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_url")
+    # Get parameters
+    weight_filename= self.config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_filename")
+    weight_url= self.config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_url")
 
     # Create a copy of the input DataFrame to store results
     df = df_images.copy()

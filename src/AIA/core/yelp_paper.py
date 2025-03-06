@@ -26,14 +26,12 @@ Each feature will be an individual function.
    - depthOfField
 """
 
-
 import cv2
 from tqdm import tqdm
 import numpy as np
 import pywt
-from ..utils.load_config import load_config
 
-def get_color_features(df_images):
+def get_color_features(self, df_images):
     """
     Computes color-related features for images, including:
       - brightness: Mean brightness, normalized to [0,1]
@@ -43,15 +41,16 @@ def get_color_features(df_images):
       - warmHue: Proportion of warm-hued pixels (H values in HSV <30 or >150)
       - colorfulness: Colorfulness score based on Hasler and Suesstrunk (2003), normalized to [0,1]
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added feature columns
     """
-    # parameters extraction for func get_color_features
-    config = load_config()
-    color_config = config.get("get_color_features", {})
+    # Get parameters
+    color_config = self.config.get("get_color_features", {})
     clarity_threshold = color_config.get("clarity_threshold", 0.7)
     warmHue_threshold_lower = color_config.get("warmHue_threshold_lower", 70)
     warmHue_threshold_upper = color_config.get("warmHue_threshold_upper", 160)
+    
     # Create a copy of the input DataFrame to store results
     df = df_images.copy()
 
@@ -133,8 +132,7 @@ def get_color_features(df_images):
 
     return df
 
-
-def get_composition_features(df_images):
+def get_composition_features(self, df_images):
     """
     Computes composition features for each image according to the specifications.
 
@@ -150,6 +148,7 @@ def get_composition_features(df_images):
             • colorVisualBalance_horizontal: 1 minus the normalized average Euclidean color distance between left and right symmetric pixels.
             • colorVisualBalance (average): The average of the vertical and horizontal scores.
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files.
     :return: DataFrame with added feature columns:
              - diagonalDominance
@@ -267,9 +266,7 @@ def get_composition_features(df_images):
 
     return df
 
-
-
-def get_figure_ground_relationship_features(df_images):
+def get_figure_ground_relationship_features(self, df_images):
     """
     Computes figure-ground relationship features for each image according to the specifications.
     
@@ -287,6 +284,7 @@ def get_figure_ground_relationship_features(df_images):
               of absolute detail coefficients over all 16 regions.
             A higher score indicates a lower depth of field.
     
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files.
     :return: DataFrame with added feature columns:
              - sizeDifference
@@ -295,13 +293,13 @@ def get_figure_ground_relationship_features(df_images):
              - depthOfFieldHue, depthOfFieldSaturation, depthOfFieldValue
     """
 
-    # parameters extraction for func get_figure_ground_relationship_features
-    config = load_config()
-    fg_config = config.get("get_figure_ground_relationship_features", {})
+    # Get parameters
+    fg_config = self.config.get("get_figure_ground_relationship_features", {})
     saliency_threshold = fg_config.get("saliency_threshold", 0.5)
     canny_edge_low_threshold = fg_config.get("canny_edge_low_threshold", 100)
     canny_edge_high_threshold = fg_config.get("canny_edge_high_threshold", 200)
     
+    # Create a copy of the input DataFrame to store results
     df = df_images.copy()
     
     # Initialize feature columns using camelCase naming

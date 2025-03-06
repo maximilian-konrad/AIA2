@@ -4,12 +4,13 @@ import math
 from scipy.signal import convolve2d
 from tqdm import tqdm
 
-def estimate_noise(df_images):
+def estimate_noise(self, df_images):
     """
     Estimate the noise level in images using a Laplacian kernel convolution method.
     The function calculates a sigma value that represents the amount of noise,
     where values above 10 indicate significant noise presence in the image.
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added 'noise' column containing the sigma values
             where higher values (>10) indicate noisier images

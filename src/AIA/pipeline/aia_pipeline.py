@@ -1,11 +1,10 @@
 # Standard library imports
 import os  # Operating system dependent functionality
-import sys  # Access to system-specific parameters and functions
 import time
 import torch
+import gc  
 
 # Third-party library imports
-from tqdm import tqdm  # Progress bar for loops
 import pandas as pd  # Data manipulation and analysis
 from fpdf import FPDF
 
@@ -33,36 +32,21 @@ class AIA:
     extract features, and manage the image analysis pipeline.
     """
 
-    def __init__(self, config):
+    def __init__(self, params_path):
         """
         Initialize the AIA pipeline with a configuration dictionary.
 
-        :param config: A dictionary containing configuration parameters such as:
-            - 'output_dir' (str): Directory to save the output results.
-            - 'resize_percent' (int): Percentage to resize the images (default: 100).
-            - 'evaluate_brisque' (bool): Whether to evaluate BRISQUE score (default: False).
-            - 'evaluate_sharpness' (bool): Whether to evaluate image sharpness (default: False).
-            - 'include_summary' (bool): Whether to include summary statistics (default: False).
+        :param params_path: The path to the parameters file.
         """
-        
-        # Store configuration and set up output directory
-        self.config = config
-        self.full_config = load_config()
-        self.output_dir = config.get('output_dir', None)
-        
-        # If no output directory is specified, use a default path
-        if self.output_dir is None:
-            self.output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../outputs/'))
-            os.makedirs(self.output_dir, exist_ok=True)  # Create the directory if it doesn't exist
 
-        # Optional configuration parameters with default values
+        # Get parameters
+        print(f"### Initialize AIA pipeline based on parameters in: {params_path} ###")
+        self.config = load_config(params_path)
+        self.output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../outputs/'))
+        os.makedirs(self.output_dir, exist_ok=True)
         self.cuda_availability = torch.cuda.is_available()
-        self.resize_percent = config.get('resize_percent', 100)
-        self.evaluate_brisque = config.get('evaluate_brisque', False)
-        self.evaluate_sharpness = config.get('evaluate_sharpness', False)
-        self.incl_summary_stats = config.get('incl_summary_stats', False)
-        
-        print(f"Initialized AIA pipeline with config: {config}")
+        self.device = "cuda" if self.cuda_availability else "cpu"
+        self.incl_summary_stats = self.config.get("general", {}).get("summary_stats", {}).get("active")
 
     def process_batch(self, image_files):
         """
@@ -88,25 +72,38 @@ class AIA:
             predict_coco_labels_yolo11,
             predict_imagenet_classes_yolo11, 
             get_color_features,
-            get_composition_features,
-            get_figure_ground_relationship_features,
+            get_composition_features, # TODO: Fix saliency issue
+            get_figure_ground_relationship_features, # TODO: Fix saliency issue
             get_ocr_text,
             calculate_aesthetic_scores,
             detect_objects,
             visual_complexity
         ]
 
-        print(f"Processing batch of n={len(df_images)} images")
+        # Console outputs
+        if self.cuda_availability:
+            print(f"### Using GPU (CUDA) ###")
+        else:
+            print(f"### Using CPU ###")
+        print(f"### Started processing batch of n={len(df_images)} images ###")
+
         # Iterate over each function specified in feature extractor
         for func in feature_extractors:
-            print(f"Processing {func.__name__}()")
+            print(f"### Processing {func.__name__}() ###")
             tic = time.perf_counter()
             # Execute function
-            df_temp = func(df_images)
+            df_temp = func(self, df_images)
             # Append results to dataframe
             df_out = df_out.merge(df_temp, on='filename', how='left')
             toc = time.perf_counter()
-            print(f"Time for {func.__name__}(): {toc - tic:.4f} seconds")
+            print(f"{toc - tic:.4f} seconds needed")
+
+            # Run GC and empty cuda cache
+            if self.cuda_availability:
+                torch.cuda.empty_cache()
+            gc.collect()
+
+        print(f"### Finished processing batch of n={len(df_images)} images ###")
 
         return df_out
    
@@ -176,7 +173,7 @@ class AIA:
                 if not combined_stats.empty:
                     combined_stats.to_excel(writer, sheet_name='Summary Statistics')
         
-        print(f"Results saved to: {output_path}")
+        print(f"### Results saved to: {output_path} ###")
 
     def generate_pdf_from_excel(self, excel_path, output_pdf_path):
         # Load the Excel file

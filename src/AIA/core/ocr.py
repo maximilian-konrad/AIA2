@@ -6,27 +6,24 @@ OCR module for extracting text from images using pytesseract and identifying lan
 from tqdm import tqdm
 from PIL import Image
 import pytesseract
-import os
+
 import platform
 import traceback
 from langdetect import detect, LangDetectException
-from ..utils.helper_functions import load_config
 
-def get_ocr_text(df_images):
+def get_ocr_text(self, df_images):
     """
     Extract text from images using pytesseract and identify the language.
     
+    :param self: AIA object
     :param df_images: DataFrame containing image filenames
     :return: DataFrame with OCR results (ocrHasText, ocrText, and ocrLanguage columns)
     """
-
-    # Load the full configuration directly from params.yaml
-    full_config = load_config()
-
+    
     # If system is windows, pass tesseract path
     if platform.system() == "Windows":
         try:
-            tesseract_path = full_config.get("features", {}).get("extract_text_ocr", {}).get("parameters", {}).get("windows_path_to_tesseract")
+            tesseract_path = self.config.get("features", {}).get("extract_text_ocr", {}).get("parameters", {}).get("windows_path_to_tesseract")
             if tesseract_path:
                 print(f"Windows system detected. Using Tesseract path: {tesseract_path}")
                 pytesseract.pytesseract.tesseract_cmd = tesseract_path

@@ -5,17 +5,15 @@ Add general comments here.
 # Imports
 from tqdm import tqdm
 import numpy as np
-from ..utils.load_config import load_config
 
-def function_name(df_images):
+def function_name(self, df_images):
     """
     Describe what the function does here.
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added feature columns
     """
-    # parameters extraction if necessary
-    config = load_config()
 
     # Create a copy of the input DataFrame to store results
     df = df_images.copy()

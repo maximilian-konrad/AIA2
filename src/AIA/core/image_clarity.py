@@ -2,12 +2,13 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-def calculate_image_clarity(df_images):
+def calculate_image_clarity(self, df_images):
     """
     Calculate the clarity score for each image by measuring the proportion of high-brightness pixels.
     The score represents the percentage of pixels with brightness values between 0.7 and 1.0
     (after normalizing to 0-1 range). Higher scores indicate brighter, clearer images.
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added 'clarity' column containing scores between 0 and 1
             where 1 means all pixels are in the high-brightness range

@@ -2,12 +2,13 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-def calculate_hue_proportions(df_images):
+def calculate_hue_proportions(self, df_images):
     """
     Calculate the proportions of warm and cold hues in images using HSV color space.
     Warm hues are defined as those outside 30-110° in HSV (reds, oranges, yellows),
     while cold hues are those within 30-110° (greens, blues).
 
+    :param self: AIA object
     :param df_images: DataFrame containing a 'filename' column with paths to image files
     :return: DataFrame with added columns:
             - hues_warm: ratio of warm to cold pixels (inf if no cold pixels)
