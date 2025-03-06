@@ -29,6 +29,13 @@ To set up the Conda environment, follow these steps:
     conda activate aia
     ```
 
+### Select features and parameters
+
+The features and parameters are defined in the configuration.yaml file.
+This file is stored in the config folder.
+
+To enable or disable a feature, set the resepective parameter  `active` to True or False.
+
 ### Run the pipeline
 
 Option A: **Use the Jupyter notebook**:

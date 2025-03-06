@@ -4,20 +4,22 @@ import os
 import yaml
 
 
-def load_config(params_path):
+def load_config(config_path):
     """
-    Loads the configuration from the params.yaml file.
+    Loads the configuration yaml file
 
+    :param config_path: The path to the configuration file.
     :return: The configuration as a dictionary.
     """
 
     # Load the full configuration directly from params.yaml
     try:
-        with open(params_path, 'r') as file:
+        with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
-        print(f"### Successfully loaded parameters from {params_path} ###")
+        print(f"### Successfully loaded configuration from {config_path} ###")
     except Exception as e:
-        print(f"### ERROR loading parameters directly: {e} ###")
+        print(f"### ERROR loading configuration from {config_path}: {e} ###")
+        print(f"{e}")
         config = {}
 
     return config

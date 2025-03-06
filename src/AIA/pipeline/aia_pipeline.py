@@ -1,28 +1,26 @@
-# Standard library imports
-import os  # Operating system dependent functionality
+# General imports
+from fpdf import FPDF
+import gc  
+import os
+import pandas as pd
 import time
 import torch
-import gc  
-
-# Third-party library imports
-import pandas as pd  # Data manipulation and analysis
-from fpdf import FPDF
 
 # Project-specific imports
+from ..core.basic_img_features import extract_basic_image_features
+from ..core.blur_detection import extract_blur_value
+from ..core.contrast_of_brightness import calculate_contrast_of_brightness
+from ..core.image_clarity import calculate_image_clarity
+from ..core.nima_idealo import calculate_aesthetic_scores
+from ..core.noise_detection import estimate_noise
+from ..core.ocr import get_ocr_text
+from ..core.ov_object_detection import detect_objects
+from ..core.salient_region_features import calculate_salient_region_features
+from ..core.visual_complexity import visual_complexity
+from ..core.warm_cold_hue import calculate_hue_proportions
+from ..core.yelp_paper import get_color_features, get_composition_features, get_figure_ground_relationship_features
+from ..core.yolo import predict_coco_labels_yolo11, predict_imagenet_classes_yolo11
 from ..utils.helper_functions import load_config
-from ..core.basic_img_features import extract_basic_image_features  # Function to extract basic features from images
-from ..core.blur_detection import extract_blur_value # Function to extract blur value
-from ..core.noise_detection import estimate_noise # Function to extract noise value
-from ..core.contrast_of_brightness import calculate_contrast_of_brightness # Function to calculate contrast of brightness
-from ..core.image_clarity import calculate_image_clarity # Function to calculate image clarity
-from ..core.warm_cold_hue import calculate_hue_proportions # Function to calculate warm hue proportion and cold hue proportion
-from ..core.salient_region_features import calculate_salient_region_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
-from ..core.yolo import predict_coco_labels_yolo11, predict_imagenet_classes_yolo11 # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color 
-from ..core.yelp_paper import get_color_features, get_composition_features, get_figure_ground_relationship_features # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
-from ..core.nima_idealo import calculate_aesthetic_scores # Function to calculate Diagonal Dominance, Rule of Thirds, Visual Balance Intensity, Visual Balance Color
-from ..core.ocr import get_ocr_text # Function to extract text from images using OCR
-from ..core.ov_object_detection import detect_objects # Function to detect objects in images
-from ..core.visual_complexity import visual_complexity # Function to detect objects in images
 
 class AIA:
     """
@@ -32,18 +30,19 @@ class AIA:
     extract features, and manage the image analysis pipeline.
     """
 
-    def __init__(self, params_path):
+    def __init__(self, config_path):
         """
         Initialize the AIA pipeline with a configuration dictionary.
 
-        :param params_path: The path to the parameters file.
+        :param config_path: The path to the configuration file.
         """
 
         # Get parameters
-        self.config = load_config(params_path)
+        self.config = load_config(config_path)
         self.timestamp = time.strftime("%Y%m%d_%H%M%S")
         self.input_dir = self.config.get("general", {}).get("input_dir")
         self.output_dir = self.config.get("general", {}).get("output_dir")
+        self.output_dir = os.path.join(self.output_dir , self.timestamp+ "\\")
         os.makedirs(self.output_dir, exist_ok=True)
         self.verbose = self.config.get("general", {}).get("verbose", True)
         self.incl_summary_stats = self.config.get("general", {}).get("summary_stats", {}).get("active", True)

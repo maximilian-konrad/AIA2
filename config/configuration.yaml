@@ -48,7 +48,10 @@ features:
 
   get_color_features:
     active: False
-    parameters: None
+    parameters:
+      clarity_threshold: 0.7
+      warmHue_threshold_lower: 70
+      warmHue_threshold_upper: 160
 
   get_composition_features:
     active: False
@@ -56,7 +59,10 @@ features:
 
   get_figure_ground_relationship_features:
     active: False
-    parameters: None
+    parameters: 
+      saliency_threshold: 0.5
+      canny_edge_low_threshold: 100
+      canny_edge_high_threshold: 200
 
   visual_complexity:
     active: False
