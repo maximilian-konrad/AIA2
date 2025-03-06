@@ -15,9 +15,9 @@ def load_config(params_path):
     try:
         with open(params_path, 'r') as file:
             config = yaml.safe_load(file)
-        print("Successfully loaded parameters from {params_path}.")
+        print(f"### Successfully loaded parameters from {params_path} ###")
     except Exception as e:
-        print(f"Error loading parameters directly: {e}")
+        print(f"### ERROR loading parameters directly: {e} ###")
         config = {}
 
     return config

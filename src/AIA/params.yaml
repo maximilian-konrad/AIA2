@@ -1,76 +1,85 @@
 general:
-  input_dir: {}
+  input_dir: '..\\..\\data\\test_ai_imgs_20\\'
+  output_dir: '..\\..\\outputs\\'
   summary_stats:
     active: True
   verbose: False
 
 features:
   extract_basic_image_features:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
   neural_image_assessment:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
   extract_blur_value:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
   estimate_noise:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
   calculate_contrast_of_brightness:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
   calculate_image_clarity:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
   calculate_hue_proportions:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
   calculate_salient_region_features:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
-  detect_coco_labels_yolo11:
-    active: false
-    parameters: {}
+  predict_coco_labels_yolo11:
+    active: True
+    parameters: None
+
+  predict_imagenet_classes_yolo11:
+    active: True
+    parameters: None
 
   get_color_features:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
   get_composition_features:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
 
   get_figure_ground_relationship_features:
-    active: false
-    parameters: {}
+    active: True
+    parameters: None
+
+  visual_complexity:
+    active: True
+    parameters: None
 
   detect_objects:
-    active: true
+    active: True
     parameters: 
       objects_to_detect:
-        - "person"
-        - "car"
-        - "bicycle"
-        - "motorcycle"
-        - "bus"
-        - "train"
+        - 'person'
+        - 'car'
+        - 'bicycle'
+        - 'motorcycle'
+        - 'bus'
+        - 'train'
 
   calculate_aesthetic_scores:
-    active: false
+    active: True
     parameters:
-      weight_filename: "weights_mobilenet_aesthetic_0.07.hdf5"
-      weight_url: "https://github.com/idealo/image-quality-assessment/blob/master/models/MobileNet/weights_mobilenet_aesthetic_0.07.hdf5?raw=true"
+      weight_filename: 'weights_mobilenet_aesthetic_0.07.hdf5'
+      weight_url: 'https://github.com/idealo/image-quality-assessment/blob/master/models/MobileNet/weights_mobilenet_aesthetic_0.07.hdf5?raw=true'
 
-  extract_text_ocr:
-    active: true
+  get_ocr_text:
+    active: True
     parameters:
       windows_path_to_tesseract: 'C:\\Users\\ge53hed\\AppData\\Local\\Tesseract-OCR\\tesseract.exe' 

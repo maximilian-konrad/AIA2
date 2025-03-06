@@ -23,7 +23,7 @@ def get_ocr_text(self, df_images):
     # If system is windows, pass tesseract path
     if platform.system() == "Windows":
         try:
-            tesseract_path = self.config.get("features", {}).get("extract_text_ocr", {}).get("parameters", {}).get("windows_path_to_tesseract")
+            tesseract_path = self.config.get("features", {}).get("get_ocr_text", {}).get("parameters", {}).get("windows_path_to_tesseract")
             if tesseract_path:
                 print(f"Windows system detected. Using Tesseract path: {tesseract_path}")
                 pytesseract.pytesseract.tesseract_cmd = tesseract_path

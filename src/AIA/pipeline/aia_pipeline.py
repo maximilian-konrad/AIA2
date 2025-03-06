@@ -40,55 +40,71 @@ class AIA:
         """
 
         # Get parameters
-        print(f"### Initialize AIA pipeline based on parameters in: {params_path} ###")
         self.config = load_config(params_path)
-        self.output_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../outputs/'))
+        self.timestamp = time.strftime("%Y%m%d_%H%M%S")
+        self.input_dir = self.config.get("general", {}).get("input_dir")
+        self.output_dir = self.config.get("general", {}).get("output_dir")
         os.makedirs(self.output_dir, exist_ok=True)
+        self.verbose = self.config.get("general", {}).get("verbose", True)
+        self.incl_summary_stats = self.config.get("general", {}).get("summary_stats", {}).get("active", True)
+
         self.cuda_availability = torch.cuda.is_available()
         self.device = "cuda" if self.cuda_availability else "cpu"
-        self.incl_summary_stats = self.config.get("general", {}).get("summary_stats", {}).get("active")
-
-    def process_batch(self, image_files):
-        """
-        Process a batch of images from a list of file paths.
-
-        :param image_files: A list of file paths for the images to be processed.
-        :return: A DataFrame containing the features extracted from each image.
-        """
-        
-        # Initialize a dataframe with a single column filename and is filled with all image_files from image_files
-        df_images = pd.DataFrame({'filename': image_files})
-        df_out = df_images.copy(deep=True)
-
-        # List of feature extractor functions
-        feature_extractors = [
-            extract_basic_image_features,
-            extract_blur_value,
-            estimate_noise,
-            calculate_contrast_of_brightness,
-            calculate_image_clarity,
-            calculate_hue_proportions,
-            calculate_salient_region_features,
-            predict_coco_labels_yolo11,
-            predict_imagenet_classes_yolo11, 
-            get_color_features,
-            get_composition_features, # TODO: Fix saliency issue
-            get_figure_ground_relationship_features, # TODO: Fix saliency issue
-            get_ocr_text,
-            calculate_aesthetic_scores,
-            detect_objects,
-            visual_complexity
-        ]
-
         # Console outputs
         if self.cuda_availability:
             print(f"### Using GPU (CUDA) ###")
         else:
             print(f"### Using CPU ###")
-        print(f"### Started processing batch of n={len(df_images)} images ###")
 
-        # Iterate over each function specified in feature extractor
-        for func in feature_extractors:
+    def process_batch(self):
+        """
+        Process a batch of images from a list of file paths.
+
+        :param self: AIA object
+        :return: A DataFrame containing the features extracted from each image.
+        """
+
+        # Identify all images in input directory
+        image_files = [os.path.join(self.input_dir, f) for f in os.listdir(self.input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp', '.ppm', '.pgm', '.pbm', '.gif', '.hdr', '.exr'))]
+
+        # Initialize dataframe with all image files
+        df_images = pd.DataFrame({'filename': image_files})
+        df_out = df_images.copy(deep=True)
+
+        # Create a dataframe of feature extractor functions with active status and time tracking
+        df_logs = pd.DataFrame({
+            'functions': [
+                extract_basic_image_features,
+                extract_blur_value,
+                estimate_noise,
+                calculate_contrast_of_brightness,
+                calculate_image_clarity,
+                calculate_hue_proportions,
+                calculate_salient_region_features,
+                predict_coco_labels_yolo11,
+                predict_imagenet_classes_yolo11,
+                get_color_features,
+                get_composition_features,
+                get_figure_ground_relationship_features,
+                get_ocr_text,
+                calculate_aesthetic_scores,
+                detect_objects,
+                visual_complexity
+            ]
+        })
+        df_logs['active'] = None
+        df_logs['seconds_needed'] = None
+
+        # Identify which fucntions should be processed
+        for idx, row in df_logs.iterrows():
+            func_name = row['functions'].__name__
+            df_logs.at[idx, 'active'] = self.config.get('features', {}).get(func_name, {}).get('active', False)
+
+        print(f"### Starting batch of n={len(df_images)} images ###")
+        # Iterate over each function in the feature_extractors_df dataframe
+        for idx, row in df_logs.iterrows():
+            func = row['functions']
+
             print(f"### Processing {func.__name__}() ###")
             tic = time.perf_counter()
             # Execute function
@@ -98,49 +114,51 @@ class AIA:
             toc = time.perf_counter()
             print(f"{toc - tic:.4f} seconds needed")
 
+            # Save time needed
+            df_logs.at[idx, 'seconds_needed'] = toc - tic
+
             # Run GC and empty cuda cache
             if self.cuda_availability:
                 torch.cuda.empty_cache()
             gc.collect()
 
-        print(f"### Finished processing batch of n={len(df_images)} images ###")
+        print(f"### Finished batch of n={len(df_images)} images ###")
 
-        return df_out
-   
-    def save_results(self, df_results, output_path = None):
+        return df_out, df_logs
+
+    def save_results(self, df_results, output_dir = None):
         """
         Save the processed results to an Excel file.
 
-        :param output_path: The path to save the results to. If not provided,
+        :param output_dir: The directory to save the results to. If not provided,
                             the results will be saved in the default output directory.
         """
-        if output_path is None:
-            output_path = os.path.join(self.output_dir, 'results.xlsx')
 
-        # Create an Excel writer object
-        with pd.ExcelWriter(output_path, engine='openpyxl') as writer:
+        if output_dir is None:
+            output_dir = self.output_dir
+        
+        # Save as CSV
+        df_results.to_csv(output_dir + f'{self.timestamp}_results.csv', index=False, encoding='utf-8')
+
+        # Save as XLSX
+        with pd.ExcelWriter(output_dir + f'{self.timestamp}_results.xlsx', engine='openpyxl') as writer:
             # Check if the DataFrame exceeds Excel's column limit (16,384 columns)
             if df_results.shape[1] > 16384:
-                # Create a message DataFrame to inform the user
                 message_df = pd.DataFrame({
                     'Message': ['The results contain more than 16,384 columns, which exceeds Excel\'s limit.',
                                'Please refer to the CSV file for the complete results.']
                 })
                 message_df.to_excel(writer, sheet_name='Raw Data', index=False)
             else:
-                # Save the main results to the first sheet if within Excel's limits
+                # Save results
                 df_results.to_excel(writer, sheet_name='Raw Data', index=False)
             
-            # Also save as CSV with UTF-8 encoding
-            csv_path = os.path.splitext(output_path)[0] + '.csv'
-            df_results.to_csv(csv_path, index=False, encoding='utf-8')
+
             
-            # If summary statistics are requested, create and save them
+            # Save summary statistics
             if self.incl_summary_stats:
-                # Calculate summary statistics for numeric columns only
+                # Numeric columns
                 numeric_cols = df_results.select_dtypes(include=['int64', 'float64']).columns
-                
-                # Only calculate stats if there are numeric columns
                 if len(numeric_cols) > 0:
                     summary_stats = df_results[numeric_cols].agg([
                         'count',
@@ -152,10 +170,8 @@ class AIA:
                 else:
                     summary_stats = pd.DataFrame()
 
-                # Calculate count and percentage for binary columns
+                # Binary columns
                 binary_cols = df_results.select_dtypes(include=['bool']).columns
-                
-                # Only calculate stats if there are binary columns
                 if len(binary_cols) > 0:
                     binary_stats = df_results[binary_cols].agg(['sum', 'count'])
                     binary_stats.loc['share'] = binary_stats.loc['sum'] / binary_stats.loc['count']
@@ -173,7 +189,31 @@ class AIA:
                 if not combined_stats.empty:
                     combined_stats.to_excel(writer, sheet_name='Summary Statistics')
         
-        print(f"### Results saved to: {output_path} ###")
+        print(f"### Results saved to: {output_dir} with filename: ###")
+        print(f"### - {f'{self.timestamp}_results.csv'} ###")
+        print(f"### - {f'{self.timestamp}_results.xlsx'} ###")
+
+    def save_logs(self, df_logger, output_dir = None):
+        """
+        Save the logs to an Excel & CSV file.
+
+        :param output_dir: The directory to save the logs to. If not provided,
+                            the results will be saved in the default output directory.
+        """
+
+        if output_dir is None:
+            output_dir = self.output_dir
+
+        # Save as CSV
+        df_logger.to_csv(output_dir + f'{self.timestamp}_logs.csv', index=False, encoding='utf-8')
+
+        # Save as XLSX
+        with pd.ExcelWriter(output_dir + f'{self.timestamp}_logs.xlsx', engine='openpyxl') as writer:
+            df_logger.to_excel(writer, sheet_name='Raw Data', index=False)
+        
+        print(f"### Logs saved to: {output_dir} with filename: ###")
+        print(f"### - {f'{self.timestamp}_logs.csv'} ###")
+        print(f"### - {f'{self.timestamp}_logs.xlsx'} ###")
 
     def generate_pdf_from_excel(self, excel_path, output_pdf_path):
         # Load the Excel file

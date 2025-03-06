@@ -37,7 +37,6 @@ def calculate_aesthetic_scores(self, df_images):
     # Construct the absolute path for the model weights (assuming they are stored in a 'weights' folder one level up)
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     model_path = os.path.join(base_dir, 'weights', weight_filename)
-    print(f"model_path: {model_path}")
     
     # Construct the MobileNet-based NIMA model within the function
     base_model = tf.keras.applications.MobileNet(

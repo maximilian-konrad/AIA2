@@ -24,7 +24,7 @@ def upload_file():
             file_paths.append(file_path)
         
         # Process only the uploaded files
-        df_results = aia.process_batch(file_paths)
+        df_results, _ = aia.process_batch(file_paths)
         
         # Save results with timestamp
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
