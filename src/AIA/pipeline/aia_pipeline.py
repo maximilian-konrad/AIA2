@@ -43,6 +43,7 @@ class AIA:
         # Get parameters
         self.config = load_config(config_path)
         self.timestamp = time.strftime("%Y%m%d_%H%M%S")
+        print(f'Timestamp: {self.timestamp}')
         self.input_dir = self.config.get("general", {}).get("input_dir")
         self.output_dir = self.config.get("general", {}).get("output_dir")
         self.output_dir = os.path.join(self.output_dir , self.timestamp+ "\\")
@@ -105,7 +106,11 @@ class AIA:
         df_logs['active'] = None
         df_logs['seconds_needed'] = None
 
-        # Identify which fucntions should be processed
+        # Save interim df_out and df_logs
+        self.save_results(df_out)
+        self.save_logs(df_logs)
+
+        # Identify which functions should be processed
         for idx, row in df_logs.iterrows():
             func_name = row['functions'].__name__
             df_logs.at[idx, 'active'] = self.config.get('features', {}).get(func_name, {}).get('active', False)
@@ -129,9 +134,12 @@ class AIA:
                 df_out = df_out.merge(df_temp, on='filename', how='left')
                 toc = time.perf_counter()
                 print(f"{toc - tic:.4f} seconds needed")
-
                 # Save time needed
                 df_logs.at[idx, 'seconds_needed'] = toc - tic
+
+                # Save interim df_out and df_logs
+                self.save_results(df_temp)
+                self.save_logs(df_logs)
 
                 # Run GC and empty cuda cache
                 if self.cuda_availability:
@@ -142,91 +150,155 @@ class AIA:
 
         return df_out, df_logs
 
-    def save_results(self, df_results, output_dir = None):
+    def save_results(self, df_results, output_dir=None):
         """
-        Save the processed results to an Excel file.
+        Save the processed results to Excel and CSV files. If files already exist,
+        merge the new results with existing data.
 
+        :param df_results: DataFrame containing results to save
         :param output_dir: The directory to save the results to. If not provided,
-                            the results will be saved in the default output directory.
+                          the results will be saved in the default output directory.
         """
-
         if output_dir is None:
             output_dir = self.output_dir
-        
-        # Save as CSV
-        df_results.to_csv(output_dir + f'{self.timestamp}_results.csv', index=False, encoding='utf-8')
 
-        # Save as XLSX
-        with pd.ExcelWriter(output_dir + f'{self.timestamp}_results.xlsx', engine='openpyxl') as writer:
-            # Check if the DataFrame exceeds Excel's column limit (16,384 columns)
-            if df_results.shape[1] > 16384:
-                message_df = pd.DataFrame({
-                    'Message': ['The results contain more than 16,384 columns, which exceeds Excel\'s limit.',
-                               'Please refer to the CSV file for the complete results.']
-                })
-                message_df.to_excel(writer, sheet_name='Raw Data', index=False)
-            else:
-                # Save results
-                df_results.to_excel(writer, sheet_name='Raw Data', index=False)
+        csv_path = output_dir + f'{self.timestamp}_results.csv'
+        xlsx_path = output_dir + f'{self.timestamp}_results.xlsx'
+
+        # Check if files already exist
+        if os.path.exists(csv_path) and os.path.exists(xlsx_path):
+            # Load existing data
+            df_saved = pd.read_csv(csv_path)
             
-
+            # Merge new results with existing data
+            df_merged = df_saved.merge(df_results, on='filename', how='left')
             
-            # Save summary statistics
-            if self.incl_summary_stats:
-                # Numeric columns
-                numeric_cols = df_results.select_dtypes(include=['int64', 'float64']).columns
-                if len(numeric_cols) > 0:
-                    summary_stats = df_results[numeric_cols].agg([
-                        'count',
-                        'mean',
-                        'std',
-                        'min',
-                        'max'
-                    ])
-                else:
-                    summary_stats = pd.DataFrame()
+            # Save updated CSV
+            df_merged.to_csv(csv_path, index=False, encoding='utf-8')
 
-                # Binary columns
-                binary_cols = df_results.select_dtypes(include=['bool']).columns
-                if len(binary_cols) > 0:
-                    binary_stats = df_results[binary_cols].agg(['sum', 'count'])
-                    binary_stats.loc['share'] = binary_stats.loc['sum'] / binary_stats.loc['count']
-                    
-                    # Combine numeric and binary statistics if both exist
-                    if not summary_stats.empty:
-                        combined_stats = pd.concat([summary_stats.transpose(), binary_stats.transpose()], axis=0)
-                    else:
-                        combined_stats = binary_stats.transpose()
+            # Save updated XLSX
+            with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
+                # Check Excel column limit
+                if df_merged.shape[1] > 16384:
+                    message_df = pd.DataFrame({
+                        'Message': ['The results contain more than 16,384 columns, which exceeds Excel\'s limit.',
+                                  'Please refer to the CSV file for the complete results.']
+                    })
+                    message_df.to_excel(writer, sheet_name='Raw Data', index=False)
                 else:
-                    # If no binary columns, just use the numeric stats
-                    combined_stats = summary_stats.transpose() if not summary_stats.empty else pd.DataFrame()
-                
-                # Only save statistics if we have any
-                if not combined_stats.empty:
-                    combined_stats.to_excel(writer, sheet_name='Summary Statistics')
-        
+                    df_merged.to_excel(writer, sheet_name='Raw Data', index=False)
+
+                # Update summary statistics
+                if self.incl_summary_stats:
+                    self._save_summary_stats(df_merged, writer)
+
+        else:
+            # Initial save - use existing logic
+            df_results.to_csv(csv_path, index=False, encoding='utf-8')
+
+            with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
+                if df_results.shape[1] > 16384:
+                    message_df = pd.DataFrame({
+                        'Message': ['The results contain more than 16,384 columns, which exceeds Excel\'s limit.',
+                                  'Please refer to the CSV file for the complete results.']
+                    })
+                    message_df.to_excel(writer, sheet_name='Raw Data', index=False)
+                else:
+                    df_results.to_excel(writer, sheet_name='Raw Data', index=False)
+
+                if self.incl_summary_stats:
+                    self._save_summary_stats(df_results, writer)
+
         print(f"### Results saved to: {output_dir} with filename: ###")
         print(f"### - {f'{self.timestamp}_results.csv'} ###")
         print(f"### - {f'{self.timestamp}_results.xlsx'} ###")
 
-    def save_logs(self, df_logger, output_dir = None):
+    def _save_summary_stats(self, df, writer):
         """
-        Save the logs to an Excel & CSV file.
+        Helper method to calculate and save summary statistics.
+        
+        :param df: DataFrame to calculate statistics for
+        :param writer: ExcelWriter object to save to
+        """
+        # Numeric columns
+        numeric_cols = df.select_dtypes(include=['int64', 'float64']).columns
+        if len(numeric_cols) > 0:
+            summary_stats = df[numeric_cols].agg(['count', 'mean', 'std', 'min', 'max'])
+        else:
+            summary_stats = pd.DataFrame()
 
+        # Binary columns
+        binary_cols = df.select_dtypes(include=['bool']).columns
+        if len(binary_cols) > 0:
+            binary_stats = df[binary_cols].agg(['sum', 'count'])
+            binary_stats.loc['share'] = binary_stats.loc['sum'] / binary_stats.loc['count']
+            
+            # Combine numeric and binary statistics if both exist
+            if not summary_stats.empty:
+                combined_stats = pd.concat([summary_stats.transpose(), binary_stats.transpose()], axis=0)
+            else:
+                combined_stats = binary_stats.transpose()
+        else:
+            # If no binary columns, just use the numeric stats
+            combined_stats = summary_stats.transpose() if not summary_stats.empty else pd.DataFrame()
+        
+        # Only save statistics if we have any
+        if not combined_stats.empty:
+            combined_stats.to_excel(writer, sheet_name='Summary Statistics')
+
+    def save_logs(self, df_logger, output_dir=None):
+        """
+        Save the logs to Excel & CSV files. If files already exist,
+        merge the new logs with existing data.
+
+        :param df_logger: DataFrame containing logs to save
         :param output_dir: The directory to save the logs to. If not provided,
-                            the results will be saved in the default output directory.
+                          the results will be saved in the default output directory.
         """
-
         if output_dir is None:
             output_dir = self.output_dir
 
-        # Save as CSV
-        df_logger.to_csv(output_dir + f'{self.timestamp}_logs.csv', index=False, encoding='utf-8')
+        csv_path = output_dir + f'{self.timestamp}_logs.csv'
+        xlsx_path = output_dir + f'{self.timestamp}_logs.xlsx'
 
-        # Save as XLSX
-        with pd.ExcelWriter(output_dir + f'{self.timestamp}_logs.xlsx', engine='openpyxl') as writer:
-            df_logger.to_excel(writer, sheet_name='Raw Data', index=False)
-        
+        # Create a copy of the dataframe to avoid modifying the original
+        df_to_save = df_logger.copy()
+
+        # Check if the functions column contains actual functions or strings
+        if df_to_save['functions'].dtype == 'O' and callable(df_to_save['functions'].iloc[0]):
+            # Convert function objects to names only when saving
+            df_to_save['functions'] = df_to_save['functions'].apply(lambda x: x.__name__ if x else None)
+
+        # Check if files already exist
+        if os.path.exists(csv_path) and os.path.exists(xlsx_path):
+            # Load existing data
+            df_saved = pd.read_csv(csv_path)
+            
+            # Update existing rows and append new ones
+            for idx, row in df_to_save.iterrows():
+                func_name = row['functions']
+                mask = df_saved['functions'] == func_name
+                
+                if mask.any():
+                    # Update existing row
+                    for col in df_to_save.columns:
+                        if col != 'functions' and pd.notna(row[col]):
+                            df_saved.loc[mask, col] = row[col]
+                else:
+                    # Append new row
+                    df_saved = pd.concat([df_saved, pd.DataFrame([row])], ignore_index=True)
+
+            # Save updated data
+            df_saved.to_csv(csv_path, index=False, encoding='utf-8')
+            with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
+                df_saved.to_excel(writer, sheet_name='Raw Data', index=False)
+
+        else:
+            # Initial save
+            df_to_save.to_csv(csv_path, index=False, encoding='utf-8')
+            with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
+                df_to_save.to_excel(writer, sheet_name='Raw Data', index=False)
+
         print(f"### Logs saved to: {output_dir} with filename: ###")
         print(f"### - {f'{self.timestamp}_logs.csv'} ###")
         print(f"### - {f'{self.timestamp}_logs.xlsx'} ###")
