@@ -71,13 +71,13 @@ def get_color_features(self, df_images):
         try:
             # Check if file exists
             if not os.path.exists(image_path):
-                print(f"Warning: File not found: {image_path}")
+                if self.verbose: print(f"Warning: File not found: {image_path}")
                 continue
 
             # Load the image using OpenCV
             image = cv2.imread(image_path)
             if image is None:
-                print(f"Warning: Failed to load image: {image_path}")
+                if self.verbose: print(f"Warning: Failed to load image: {image_path}")
                 continue
 
             # Convert to HSV color space
@@ -110,7 +110,7 @@ def get_color_features(self, df_images):
             df.loc[idx, 'brightnessMean'] = brightness_val
             df.loc[idx, 'saturationMean'] = saturation_val
             df.loc[idx, 'contrast'] = contrast_val
-            df.loc[idx, 'clarity'] = clarity_val
+            df.loc[idx, 'clarity2'] = clarity_val
             df.loc[idx, 'warmHue'] = warmHue_val
             df.loc[idx, 'colorfulness'] = colorfulness_raw
 
@@ -184,13 +184,13 @@ def get_composition_features(self, df_images):
             try:
                 # Check if file exists
                 if not os.path.exists(image_path):
-                    print(f"Warning: File not found: {image_path}")
+                    if self.verbose: print(f"Warning: File not found: {image_path}")
                     continue
 
                 # Load the image using cv2
                 image = cv2.imread(image_path)
                 if image is None:
-                    print(f"Warning: Failed to load image: {image_path}")
+                    if self.verbose: print(f"Warning: Failed to load image: {image_path}")
                     continue
 
                 # Get image dimensions (height and width)
@@ -341,13 +341,13 @@ def get_figure_ground_relationship_features(self, df_images):
         try:
             # Check if file exists
             if not os.path.exists(image_path):
-                print(f"Warning: File not found: {image_path}")
+                if self.verbose: print(f"Warning: File not found: {image_path}")
                 continue
 
             # Load the image
             image = cv2.imread(image_path)
             if image is None:
-                print(f"Warning: Failed to load image: {image_path}")
+                if self.verbose: print(f"Warning: Failed to load image: {image_path}")
                 continue
 
             H, W = image.shape[:2]

@@ -2,10 +2,13 @@ general:
   input_dir: '..\\..\\data\\test_human_20\\'
   output_dir: '..\\..\\outputs\\'
   summary_stats:
-    active: False
+    active: True
   verbose: False
-  debug_mode: True
-  debug_image_count: 100 # If debug_mode is True, then randomly select debug_image_count images for processing
+  debug_mode: False
+  debug_image_count: 2 # If debug_mode is True, then randomly select debug_image_count images for processing
+  multi_processing: 
+    active: False
+    num_processes: 4
 
 features:
   extract_basic_image_features:
@@ -13,23 +16,23 @@ features:
     parameters: None
 
   extract_blur_value:
-    active: False
+    active: True
     parameters: None
 
   estimate_noise:
-    active: False
+    active: True
     parameters: None
 
   calculate_contrast_of_brightness:
-    active: False
+    active: True
     parameters: None
 
   calculate_image_clarity:
-    active: False
+    active: True
     parameters: None
 
   calculate_hue_proportions:
-    active: False
+    active: True
     parameters: None
 
   calculate_salient_region_features:
@@ -37,38 +40,38 @@ features:
     parameters: None
 
   predict_coco_labels_yolo11:
-    active: False
+    active: True
     parameters: None
 
   predict_imagenet_classes_yolo11:
-    active: False
+    active: True
     parameters: None
 
   get_color_features:
-    active: False
+    active: True
     parameters:
       clarity_threshold: 0.7
       warmHue_threshold_lower: 70
       warmHue_threshold_upper: 160
 
   get_composition_features:
-    active: False
+    active: True
     parameters: None
 
   get_figure_ground_relationship_features:
-    active: False
+    active: True
     parameters: 
       saliency_threshold: 0.5
       canny_edge_low_threshold: 100
       canny_edge_high_threshold: 200
 
   visual_complexity:
-    active: False
+    active: True
     parameters: 
       threshold: 25000
     
   self_similarity:
-    active: False
+    active: True
     parameters: None
 
   detect_objects:
@@ -82,13 +85,13 @@ features:
         - 'consumer product'
 
   calculate_aesthetic_scores:
-    active: False
+    active: True
     parameters:
       weight_filename: 'weights_mobilenet_aesthetic_0.07.hdf5'
       weight_url: 'https://github.com/idealo/image-quality-assessment/blob/master/models/MobileNet/weights_mobilenet_aesthetic_0.07.hdf5?raw=true'
 
   get_ocr_text:
-    active: False
+    active: True
     parameters:
       windows_path_to_tesseract: 'C:\\Users\\ge53hed\\AppData\\Local\\Tesseract-OCR\\tesseract.exe'
   

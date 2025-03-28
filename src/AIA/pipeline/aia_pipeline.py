@@ -39,6 +39,7 @@ class AIA:
 
         :param config_path: The path to the configuration file.
         """
+        random.seed(0)
 
         # Get parameters
         self.config = load_config(config_path)
@@ -52,6 +53,8 @@ class AIA:
         self.debug_mode = self.config.get("general", {}).get("debug_mode")
         self.debug_img_cnt = self.config.get("general", {}).get("debug_image_count")
         self.incl_summary_stats = self.config.get("general", {}).get("summary_stats", {}).get("active", True)
+        self.multi_processing = self.config.get("general", {}).get("multi_processing", {}).get("active", False)
+        self.num_processes = self.config.get("general", {}).get("multi_processing", {}).get("num_processes", 4)
 
         self.cuda_availability = torch.cuda.is_available()
         self.device = "cuda" if self.cuda_availability else "cpu"
@@ -69,10 +72,11 @@ class AIA:
         :return: A DataFrame containing the features extracted from each image.
         """
 
-        # Identify all images in input directory
+        # Collect all images from input_dir
         image_files = [os.path.join(self.input_dir, f) for f in os.listdir(self.input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp', '.ppm', '.pgm', '.pbm', '.gif', '.hdr', '.exr'))]
         if self.debug_mode and len(image_files) > self.debug_img_cnt:
             image_files = random.sample(image_files, self.debug_img_cnt)
+        image_files.sort()
 
         # Initialize dataframe with all image files
         df_images = pd.DataFrame({'filename': image_files})
@@ -82,25 +86,25 @@ class AIA:
         df_logs = pd.DataFrame({
             'functions': [
                 extract_basic_image_features,
+                describe_blip,
+                describe_llm,
+                get_ocr_text,
                 extract_blur_value,
                 estimate_noise,
                 calculate_contrast_of_brightness,
                 calculate_image_clarity,
                 calculate_hue_proportions,
                 calculate_salient_region_features,
-                predict_coco_labels_yolo11,
-                predict_imagenet_classes_yolo11,
                 get_color_features,
                 get_composition_features,
                 get_figure_ground_relationship_features,
-                get_ocr_text,
                 calculate_aesthetic_scores,
-                detect_objects,
                 visual_complexity,
                 self_similarity,
-                describe_blip,
-                describe_llm,
-                felzenszwalb_segmentation
+                felzenszwalb_segmentation,
+                detect_objects,
+                predict_coco_labels_yolo11,
+                predict_imagenet_classes_yolo11,
             ]
         })
         df_logs['active'] = None
@@ -130,6 +134,7 @@ class AIA:
                 tic = time.perf_counter()
                 # Execute function
                 df_temp = func(self, df_images)
+                
                 # Append results to dataframe
                 df_out = df_out.merge(df_temp, on='filename', how='left')
                 toc = time.perf_counter()
@@ -137,7 +142,7 @@ class AIA:
                 # Save time needed
                 df_logs.at[idx, 'seconds_needed'] = toc - tic
 
-                # Save interim df_out and df_logs
+                # Save interim df_temp and df_logs
                 self.save_results(df_temp)
                 self.save_logs(df_logs)
 
@@ -148,11 +153,67 @@ class AIA:
 
         print(f"### Finished batch of n={len(df_images)} images ###")
 
+        # Output final results as Excel files
+        self._csv_to_xlsx(
+            csv_path=self.output_dir + f'{self.timestamp}_results.csv', 
+            xlsx_path=self.output_dir + f'{self.timestamp}_results.xlsx')
+        self._csv_to_xlsx(
+            csv_path=self.output_dir + f'{self.timestamp}_logs.csv', 
+            xlsx_path=self.output_dir + f'{self.timestamp}_logs.xlsx')
+        print(f"### Final Excel versions saved to: {self.output_dir} ###")
+        
         return df_out, df_logs
+
+    def save_logs(self, df_logger, output_dir=None):
+        """
+        Save the logs to CSV file. If file already exists,
+        merge the new logs with existing data.
+
+        :param df_logger: DataFrame containing logs to save
+        :param output_dir: The directory to save the logs to. If not provided,
+                          the results will be saved in the default output directory.
+        """
+        if output_dir is None:
+            output_dir = self.output_dir
+
+        csv_path = output_dir + f'{self.timestamp}_logs.csv'
+
+        # Create a copy of the dataframe to avoid modifying the original
+        df_to_save = df_logger.copy()
+
+        # Check if the functions column contains actual functions or strings
+        if df_to_save['functions'].dtype == 'O' and callable(df_to_save['functions'].iloc[0]):
+            # Convert function objects to names only when saving
+            df_to_save['functions'] = df_to_save['functions'].apply(lambda x: x.__name__ if x else None)
+
+        # Check if file already exists
+        if os.path.exists(csv_path):
+            # Load existing data
+            df_saved = pd.read_csv(csv_path)
+            
+            # Update existing rows and append new ones
+            for idx, row in df_to_save.iterrows():
+                func_name = row['functions']
+                mask = df_saved['functions'] == func_name
+                
+                if mask.any():
+                    # Update existing row
+                    for col in df_to_save.columns:
+                        if col != 'functions' and pd.notna(row[col]):
+                            df_saved.loc[mask, col] = row[col]
+                else:
+                    # Append new row
+                    df_saved = pd.concat([df_saved, pd.DataFrame([row])], ignore_index=True)
+
+            # Save updated data
+            df_saved.to_csv(csv_path, index=False, encoding='utf-8')
+        else:
+            # Initial save
+            df_to_save.to_csv(csv_path, index=False, encoding='utf-8')
 
     def save_results(self, df_results, output_dir=None):
         """
-        Save the processed results to Excel and CSV files. If files already exist,
+        Save the processed results to CSV file. If file already exists,
         merge the new results with existing data.
 
         :param df_results: DataFrame containing results to save
@@ -163,10 +224,9 @@ class AIA:
             output_dir = self.output_dir
 
         csv_path = output_dir + f'{self.timestamp}_results.csv'
-        xlsx_path = output_dir + f'{self.timestamp}_results.xlsx'
 
-        # Check if files already exist
-        if os.path.exists(csv_path) and os.path.exists(xlsx_path):
+        # Check if file already exists
+        if os.path.exists(csv_path):
             # Load existing data
             df_saved = pd.read_csv(csv_path)
             
@@ -175,43 +235,40 @@ class AIA:
             
             # Save updated CSV
             df_merged.to_csv(csv_path, index=False, encoding='utf-8')
-
-            # Save updated XLSX
-            with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
-                # Check Excel column limit
-                if df_merged.shape[1] > 16384:
-                    message_df = pd.DataFrame({
-                        'Message': ['The results contain more than 16,384 columns, which exceeds Excel\'s limit.',
-                                  'Please refer to the CSV file for the complete results.']
-                    })
-                    message_df.to_excel(writer, sheet_name='Raw Data', index=False)
-                else:
-                    df_merged.to_excel(writer, sheet_name='Raw Data', index=False)
-
-                # Update summary statistics
-                if self.incl_summary_stats:
-                    self._save_summary_stats(df_merged, writer)
-
         else:
-            # Initial save - use existing logic
+            # Initial save
             df_results.to_csv(csv_path, index=False, encoding='utf-8')
 
-            with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
-                if df_results.shape[1] > 16384:
-                    message_df = pd.DataFrame({
-                        'Message': ['The results contain more than 16,384 columns, which exceeds Excel\'s limit.',
-                                  'Please refer to the CSV file for the complete results.']
-                    })
-                    message_df.to_excel(writer, sheet_name='Raw Data', index=False)
-                else:
-                    df_results.to_excel(writer, sheet_name='Raw Data', index=False)
+    def _csv_to_xlsx(self, csv_path, xlsx_path):
+        """
+        Helper method to convert a CSV file to an Excel file.
+        """
+        # Handle results Excel file
+        if os.path.exists(csv_path):
+            
+            # Open file
+            df = pd.read_csv(csv_path)
 
-                if self.incl_summary_stats:
-                    self._save_summary_stats(df_results, writer)
+            # Handle logs and results
+            if csv_path.endswith('_logs.csv'):
+                with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
+                    df.to_excel(writer, sheet_name='Raw Data', index=False)
 
-        print(f"### Results saved to: {output_dir} with filename: ###")
-        print(f"### - {f'{self.timestamp}_results.csv'} ###")
-        print(f"### - {f'{self.timestamp}_results.xlsx'} ###")
+            elif csv_path.endswith('_results.csv'):
+                with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
+                    # Check Excel column limit
+                    if df.shape[1] > 16384:
+                        message_df = pd.DataFrame({
+                            'Message': ['The results contain more than 16,384 columns, which exceeds Excel\'s limit.',
+                                    'Please refer to the CSV file for the complete results.']
+                        })
+                        message_df.to_excel(writer, sheet_name='Raw Data', index=False)
+                    else:
+                        df.to_excel(writer, sheet_name='Raw Data', index=False)
+
+                    # Add summary statistics
+                    if self.incl_summary_stats:
+                        self._save_summary_stats(df, writer)
 
     def _save_summary_stats(self, df, writer):
         """
@@ -245,63 +302,6 @@ class AIA:
         # Only save statistics if we have any
         if not combined_stats.empty:
             combined_stats.to_excel(writer, sheet_name='Summary Statistics')
-
-    def save_logs(self, df_logger, output_dir=None):
-        """
-        Save the logs to Excel & CSV files. If files already exist,
-        merge the new logs with existing data.
-
-        :param df_logger: DataFrame containing logs to save
-        :param output_dir: The directory to save the logs to. If not provided,
-                          the results will be saved in the default output directory.
-        """
-        if output_dir is None:
-            output_dir = self.output_dir
-
-        csv_path = output_dir + f'{self.timestamp}_logs.csv'
-        xlsx_path = output_dir + f'{self.timestamp}_logs.xlsx'
-
-        # Create a copy of the dataframe to avoid modifying the original
-        df_to_save = df_logger.copy()
-
-        # Check if the functions column contains actual functions or strings
-        if df_to_save['functions'].dtype == 'O' and callable(df_to_save['functions'].iloc[0]):
-            # Convert function objects to names only when saving
-            df_to_save['functions'] = df_to_save['functions'].apply(lambda x: x.__name__ if x else None)
-
-        # Check if files already exist
-        if os.path.exists(csv_path) and os.path.exists(xlsx_path):
-            # Load existing data
-            df_saved = pd.read_csv(csv_path)
-            
-            # Update existing rows and append new ones
-            for idx, row in df_to_save.iterrows():
-                func_name = row['functions']
-                mask = df_saved['functions'] == func_name
-                
-                if mask.any():
-                    # Update existing row
-                    for col in df_to_save.columns:
-                        if col != 'functions' and pd.notna(row[col]):
-                            df_saved.loc[mask, col] = row[col]
-                else:
-                    # Append new row
-                    df_saved = pd.concat([df_saved, pd.DataFrame([row])], ignore_index=True)
-
-            # Save updated data
-            df_saved.to_csv(csv_path, index=False, encoding='utf-8')
-            with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
-                df_saved.to_excel(writer, sheet_name='Raw Data', index=False)
-
-        else:
-            # Initial save
-            df_to_save.to_csv(csv_path, index=False, encoding='utf-8')
-            with pd.ExcelWriter(xlsx_path, engine='openpyxl') as writer:
-                df_to_save.to_excel(writer, sheet_name='Raw Data', index=False)
-
-        print(f"### Logs saved to: {output_dir} with filename: ###")
-        print(f"### - {f'{self.timestamp}_logs.csv'} ###")
-        print(f"### - {f'{self.timestamp}_logs.xlsx'} ###")
 
     def generate_pdf_from_excel(self, excel_path = None, output_pdf_path = None):
         """

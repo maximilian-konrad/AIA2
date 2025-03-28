@@ -27,7 +27,7 @@ def function_name(self, df_images):
             try:
                 # Check if file exists
                 if not os.path.exists(image_path):
-                    print(f"Warning: File not found: {image_path}")
+                    if self.verbose: print(f"Warning: File not found: {image_path}")
                     continue
 
                 # Implement feature computation here.

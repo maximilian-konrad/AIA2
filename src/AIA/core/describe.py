@@ -44,7 +44,7 @@ def describe_blip(self, df_images):
             try:
                 # Check if file exists
                 if not os.path.exists(image_path):
-                    print(f"Warning: File not found: {image_path}")
+                    if self.verbose: print(f"Warning: File not found: {image_path}")
                     df.loc[idx, 'error_blip'] = "File not found"
                     continue
 
@@ -52,7 +52,7 @@ def describe_blip(self, df_images):
                 try:
                     image = Image.open(image_path).convert('RGB')
                 except Exception as e:
-                    print(f"Warning: Failed to load image: {image_path}")
+                    if self.verbose: print(f"Warning: Failed to load image: {image_path}")
                     df.loc[idx, 'error_blip'] = f"Image load error: {str(e)}"
                     continue
 
@@ -125,7 +125,7 @@ def describe_llm(self, df_images, prompt="Describe the image."):
             try:
                 # Check if file exists
                 if not os.path.exists(image_path):
-                    print(f"Warning: File not found: {image_path}")
+                    if self.verbose: print(f"Warning: File not found: {image_path}")
                     df.loc[idx, 'error_llm'] = "File not found"
                     continue
 
@@ -133,7 +133,7 @@ def describe_llm(self, df_images, prompt="Describe the image."):
                 try:
                     image = Image.open(image_path)
                 except Exception as e:
-                    print(f"Warning: Failed to load image: {image_path}")
+                    if self.verbose: print(f"Warning: Failed to load image: {image_path}")
                     df.loc[idx, 'error_llm'] = f"Image load error: {str(e)}"
                     continue
 

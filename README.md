@@ -2,6 +2,12 @@
 
 This repository contains the code and data for the AIA2 project. The goal of the project is to create a simple Image Analytics Pipeline that can be used in future research.
 
+## ToDo
+
+- [ ] Fix issue with double-implementation of clarity (clarity1 != clarity2)
+- [ ] Add a webapp
+- [ ] Add a Docker container
+
 ## Setup
 
 ### Conda Environment
