@@ -2,16 +2,14 @@ general:
   input_dir: '..\\..\\data\\test_human_20\\'
   output_dir: '..\\..\\outputs\\'
   summary_stats:
-    active: True
+    active: False
   verbose: False
+  debug_mode: True
+  debug_image_count: 100 # If debug_mode is True, then randomly select debug_image_count images for processing
 
 features:
   extract_basic_image_features:
     active: True
-    parameters: None
-
-  neural_image_assessment:
-    active: False
     parameters: None
 
   extract_blur_value:
@@ -66,18 +64,22 @@ features:
 
   visual_complexity:
     active: False
+    parameters: 
+      threshold: 25000
+    
+  self_similarity:
+    active: False
     parameters: None
 
   detect_objects:
     active: False
     parameters: 
       objects_to_detect:
-        - 'person'
-        - 'car'
-        - 'bicycle'
-        - 'motorcycle'
-        - 'bus'
-        - 'train'
+        - 'object'
+        - 'animal'
+        - 'human'
+        - 'consumer'
+        - 'consumer product'
 
   calculate_aesthetic_scores:
     active: False
@@ -88,4 +90,16 @@ features:
   get_ocr_text:
     active: False
     parameters:
-      windows_path_to_tesseract: 'C:\\Users\\ge53hed\\AppData\\Local\\Tesseract-OCR\\tesseract.exe' 
+      windows_path_to_tesseract: 'C:\\Users\\ge53hed\\AppData\\Local\\Tesseract-OCR\\tesseract.exe'
+  
+  describe_blip:
+    active: False
+    parameters: 
+      processor: 'Salesforce/blip-image-captioning-base'
+      model: 'Salesforce/blip-image-captioning-base'
+
+  describe_llm:
+    active: False
+    parameters: 
+      model: 'microsoft/Phi-4-multimodal-instruct'
+      max_new_tokens: 1000

@@ -27,56 +27,73 @@ def extract_basic_image_features(self, df_images):
 
     # Iterate over all images using enumerate on the DataFrame column
     for idx, image_path in enumerate(tqdm(df_images['filename'])):
-        # Load the image using cv2
-        image = cv2.imread(image_path)
-        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        try:
+            # Check if file exists
+            if not os.path.exists(image_path):
+                print(f"Warning: File not found: {image_path}")
+                continue
 
-        # File specific features
-        df.loc[idx, 'fileName'] = os.path.splitext(os.path.basename(image_path))[0]
-        df.loc[idx, 'fileType'] = os.path.splitext(image_path)[1][1:].lower()
-        df.loc[idx, 'fileSize'] = os.path.getsize(image_path) / 1024
-        df.loc[idx, 'fileCreationTime'] = os.path.getctime(image_path)
+            # Load the image using cv2
+            image = cv2.imread(image_path)
+            if image is None:
+                print(f"Warning: Failed to load image: {image_path}")
+                continue
 
-        # # Image meta data
-        # df.loc[idx, 'lens'] = image.get('Lens', 'NA')
-        # df.loc[idx, 'focalLength'] = image.get('FocalLength', 'NA')
-        # df.loc[idx, 'aperture'] = image.get('Aperture', 'NA')
-        # df.loc[idx, 'exposureTime'] = image.get('ExposureTime', 'NA')
-        # df.loc[idx, 'ISO'] = image.get('ISO', 'NA')
-        # df.loc[idx, 'shutterSpeed'] = image.get('ShutterSpeedValue', 'NA')
-        # df.loc[idx, 'whiteBalance'] = image.get('WhiteBalance', 'NA')
-        # df.loc[idx, 'flash'] = image.get('Flash', 'NA')
-        # df.loc[idx, 'meteringMode'] = image.get('MeteringMode', 'NA')
-        # df.loc[idx, 'exposureProgram'] = image.get('ExposureProgram', 'NA')
+            # Color space conversions
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image_hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+            image_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-        # Image dimensions
-        df.loc[idx, 'height'] = image.shape[0]
-        df.loc[idx, 'width'] = image.shape[1]
-        df.loc[idx, 'aspectRatio'] = df.loc[idx, 'width'] / df.loc[idx, 'height']
+            # File specific features
+            df.loc[idx, 'fileName'] = os.path.splitext(os.path.basename(image_path))[0]
+            df.loc[idx, 'fileType'] = os.path.splitext(image_path)[1][1:].lower()
+            df.loc[idx, 'fileSize'] = os.path.getsize(image_path) / 1024
+            df.loc[idx, 'fileCreationTime'] = os.path.getctime(image_path)
 
-        # Color channels
-        df.loc[idx, 'rMean'] = np.mean(image_rgb[:, :, 0])
-        df.loc[idx, 'rStd'] = np.std(image_rgb[:, :, 0])
-        df.loc[idx, 'gMean'] = np.mean(image_rgb[:, :, 1])
-        df.loc[idx, 'gStd'] = np.std(image_rgb[:, :, 1])
-        df.loc[idx, 'bMean'] = np.mean(image_rgb[:, :, 2])
-        df.loc[idx, 'bStd'] = np.std(image_rgb[:, :, 2])
+            # # Image meta data
+            # df.loc[idx, 'lens'] = image.get('Lens', 'NA')
+            # df.loc[idx, 'focalLength'] = image.get('FocalLength', 'NA')
+            # df.loc[idx, 'aperture'] = image.get('Aperture', 'NA')
+            # df.loc[idx, 'exposureTime'] = image.get('ExposureTime', 'NA')
+            # df.loc[idx, 'ISO'] = image.get('ISO', 'NA')
+            # df.loc[idx, 'shutterSpeed'] = image.get('ShutterSpeedValue', 'NA')
+            # df.loc[idx, 'whiteBalance'] = image.get('WhiteBalance', 'NA')
+            # df.loc[idx, 'flash'] = image.get('Flash', 'NA')
+            # df.loc[idx, 'meteringMode'] = image.get('MeteringMode', 'NA')
+            # df.loc[idx, 'exposureProgram'] = image.get('ExposureProgram', 'NA')
 
-        # HSV channels
-        df.loc[idx, 'hueMean'] = np.mean(image_hsv[:, :, 0])
-        df.loc[idx, 'hueStd'] = np.std(image_hsv[:, :, 0])
-        # df.loc[idx, 'saturationMean'] = np.mean(image_hsv[:, :, 1])
-        # df.loc[idx, 'saturationStd'] = np.std(image_hsv[:, :, 1])
-        # df.loc[idx, 'brightnessMean'] = np.mean(image_hsv[:, :, 2])
-        # df.loc[idx, 'brightnessStd'] = np.std(image_hsv[:, :, 2])
+            # Image dimensions
+            df.loc[idx, 'height'] = image.shape[0]
+            df.loc[idx, 'width'] = image.shape[1]
+            df.loc[idx, 'aspectRatio'] = df.loc[idx, 'width'] / df.loc[idx, 'height']
 
-        # # Grayscale
-        df.loc[idx, 'greyscaleMean'] = np.mean(image_gray)
-        df.loc[idx, 'greyscaleStd'] = np.std(image_gray)
+            # Color channels
+            df.loc[idx, 'rMean'] = np.mean(image_rgb[:, :, 0])
+            df.loc[idx, 'rStd'] = np.std(image_rgb[:, :, 0])
+            df.loc[idx, 'gMean'] = np.mean(image_rgb[:, :, 1])
+            df.loc[idx, 'gStd'] = np.std(image_rgb[:, :, 1])
+            df.loc[idx, 'bMean'] = np.mean(image_rgb[:, :, 2])
+            df.loc[idx, 'bStd'] = np.std(image_rgb[:, :, 2])
 
-        # # Shannon entropy
-        df.loc[idx, 'shannonEntropy'] = measure.shannon_entropy(image_gray)
+            # HSV channels
+            df.loc[idx, 'hueMean'] = np.mean(image_hsv[:, :, 0])
+            df.loc[idx, 'hueStd'] = np.std(image_hsv[:, :, 0])
+            # df.loc[idx, 'saturationMean'] = np.mean(image_hsv[:, :, 1])
+            # df.loc[idx, 'saturationStd'] = np.std(image_hsv[:, :, 1])
+            # df.loc[idx, 'brightnessMean'] = np.mean(image_hsv[:, :, 2])
+            # df.loc[idx, 'brightnessStd'] = np.std(image_hsv[:, :, 2])
+
+            # # Grayscale
+            df.loc[idx, 'greyscaleMean'] = np.mean(image_gray)
+            df.loc[idx, 'greyscaleStd'] = np.std(image_gray)
+
+            # # Shannon entropy
+            df.loc[idx, 'shannonEntropy'] = measure.shannon_entropy(image_gray)
+
+        except Exception as e:
+            error = f"Error processing {image_path}: {str(e)}"
+            print(error)
+            df.loc[idx, 'error_basic_img_features'] = error
+            continue
 
     return df

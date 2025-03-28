@@ -5,6 +5,7 @@ import os
 import pandas as pd
 import time
 import torch
+import random
 
 # Project-specific imports
 from ..core.basic_img_features import extract_basic_image_features
@@ -16,10 +17,12 @@ from ..core.noise_detection import estimate_noise
 from ..core.ocr import get_ocr_text
 from ..core.ov_object_detection import detect_objects
 from ..core.salient_region_features import calculate_salient_region_features
-from ..core.visual_complexity import visual_complexity
+from ..core.visual_complexity import visual_complexity, self_similarity
 from ..core.warm_cold_hue import calculate_hue_proportions
 from ..core.yelp_paper import get_color_features, get_composition_features, get_figure_ground_relationship_features
 from ..core.yolo import predict_coco_labels_yolo11, predict_imagenet_classes_yolo11
+from ..core.describe import describe_blip, describe_llm
+from ..core.felzenszwalb_segmentation import felzenszwalb_segmentation
 from ..utils.helper_functions import load_config
 
 class AIA:
@@ -45,6 +48,8 @@ class AIA:
         self.output_dir = os.path.join(self.output_dir , self.timestamp+ "\\")
         os.makedirs(self.output_dir, exist_ok=True)
         self.verbose = self.config.get("general", {}).get("verbose", True)
+        self.debug_mode = self.config.get("general", {}).get("debug_mode")
+        self.debug_img_cnt = self.config.get("general", {}).get("debug_image_count")
         self.incl_summary_stats = self.config.get("general", {}).get("summary_stats", {}).get("active", True)
 
         self.cuda_availability = torch.cuda.is_available()
@@ -65,6 +70,8 @@ class AIA:
 
         # Identify all images in input directory
         image_files = [os.path.join(self.input_dir, f) for f in os.listdir(self.input_dir) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.webp', '.ppm', '.pgm', '.pbm', '.gif', '.hdr', '.exr'))]
+        if self.debug_mode and len(image_files) > self.debug_img_cnt:
+            image_files = random.sample(image_files, self.debug_img_cnt)
 
         # Initialize dataframe with all image files
         df_images = pd.DataFrame({'filename': image_files})
@@ -88,7 +95,11 @@ class AIA:
                 get_ocr_text,
                 calculate_aesthetic_scores,
                 detect_objects,
-                visual_complexity
+                visual_complexity,
+                self_similarity,
+                describe_blip,
+                describe_llm,
+                felzenszwalb_segmentation
             ]
         })
         df_logs['active'] = None
@@ -102,6 +113,12 @@ class AIA:
         print(f"### Starting batch of n={len(df_images)} images ###")
         # Iterate over each function in the feature_extractors_df dataframe
         for idx, row in df_logs.iterrows():
+
+            # Flush cache
+            gc.collect()
+            if self.cuda_availability:
+                torch.cuda.empty_cache()
+
             func = row['functions']
             if row['active']:
                 print(f"### Processing {func.__name__}() ###")

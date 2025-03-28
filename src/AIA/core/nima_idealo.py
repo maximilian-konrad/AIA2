@@ -21,66 +21,78 @@ def calculate_aesthetic_scores(self, df_images):
     :return: DataFrame with an additional column 'nima_score' containing the aesthetic scores.
     """
 
-    # Get parameters
-    weight_filename= self.config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_filename")
-    weight_url= self.config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_url")
-
     # Create a copy of the input DataFrame to store results
     df = df_images.copy()
     
-    # If the weight file is not present in the current directory, download it
-    download_weights(
-        weight_filename= weight_filename,
-        weight_url= weight_url
-    )
-    
-    # Construct the absolute path for the model weights (assuming they are stored in a 'weights' folder one level up)
-    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    model_path = os.path.join(base_dir, 'weights', weight_filename)
-    
-    # Construct the MobileNet-based NIMA model within the function
-    base_model = tf.keras.applications.MobileNet(
-        input_shape=(224, 224, 3),
-        include_top=False,
-        pooling='avg',
-        weights=None  # Using custom-trained weights instead of ImageNet weights
-    )
-    x = base_model.output
-    x = tf.keras.layers.Dropout(0.75)(x)
-    # Output layer with softmax activation to produce a probability distribution over score bins
-    x = tf.keras.layers.Dense(10, activation='softmax')(x)
-    model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
-    
-    # Load weights into the model
-    model.load_weights(model_path)
-    
-    # Process each image in the DataFrame
-    for idx, image_path in enumerate(tqdm(df_images['filename'])):
+    try:
+        # Get parameters
+        weight_filename = self.config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_filename")
+        weight_url = self.config.get("features", {}).get("calculate_aesthetic_scores", {}).get("parameters", {}).get("weight_url")
+
+        # Download weights if needed
         try:
-            # Read the image using OpenCV
-            image = cv2.imread(image_path)
-            if image is None:
-                raise ValueError("Image not found or unable to load")
-            
-            # Resize the image to the expected input size (224x224)
-            image_resized = cv2.resize(image, (224, 224))
-            
-            # Convert the image from BGR to RGB and normalize to [0, 1]
-            image_rgb = cv2.cvtColor(image_resized, cv2.COLOR_BGR2RGB)
-            image_norm = image_rgb.astype("float32") / 255.0
-            
-            # Expand dimensions to create a batch of one image
-            image_input = np.expand_dims(image_norm, axis=0)
-            
-            # Predict the probability distribution over score bins (expected shape: [1, 10])
-            predictions = model.predict(image_input, verbose=False)
-            p = predictions[0]
-            
-            # Compute the weighted sum as the aesthetic score: sum_{i=1}^{10} (i * p_i)
-            aesthetic_score = sum((i + 1) * p[i] for i in range(len(p)))
-            df.loc[idx, 'nima_score'] = aesthetic_score
+            download_weights(
+                weight_filename=weight_filename,
+                weight_url=weight_url
+            )
         except Exception as e:
-            print(f"Error processing {image_path}: {str(e)}")
-            df.loc[idx, 'nima_score'] = f"Error: {str(e)}"
-    
-    return df
+            print(f"Error downloading weights: {str(e)}")
+            return df
+
+        # Load model
+        try:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            model_path = os.path.join(base_dir, 'weights', weight_filename)
+            
+            base_model = tf.keras.applications.MobileNet(
+                input_shape=(224, 224, 3),
+                include_top=False,
+                pooling='avg',
+                weights=None
+            )
+            x = base_model.output
+            x = tf.keras.layers.Dropout(0.75)(x)
+            x = tf.keras.layers.Dense(10, activation='softmax')(x)
+            model = tf.keras.models.Model(inputs=base_model.input, outputs=x)
+            model.load_weights(model_path)
+        except Exception as e:
+            print(f"Error loading model: {str(e)}")
+            return df
+
+        # Process images
+        for idx, image_path in enumerate(tqdm(df_images['filename'])):
+            try:
+                # Check if file exists
+                if not os.path.exists(image_path):
+                    print(f"Warning: File not found: {image_path}")
+                    continue
+
+                # Read and process image
+                image = cv2.imread(image_path)
+                if image is None:
+                    print(f"Warning: Failed to load image: {image_path}")
+                    continue
+
+                # Preprocess image
+                image_resized = cv2.resize(image, (224, 224))
+                image_rgb = cv2.cvtColor(image_resized, cv2.COLOR_BGR2RGB)
+                image_norm = image_rgb.astype("float32") / 255.0
+                image_input = np.expand_dims(image_norm, axis=0)
+
+                # Predict aesthetic score
+                predictions = model.predict(image_input, verbose=False)
+                p = predictions[0]
+                aesthetic_score = sum((i + 1) * p[i] for i in range(len(p)))
+                df.loc[idx, 'nima_score'] = aesthetic_score
+
+            except Exception as e:
+                error = f"Error processing {image_path}: {str(e)}"
+                print(error)
+                df.loc[idx, 'error_nima'] = error
+                continue
+
+        return df
+
+    except Exception as e:
+        print(f"Error in NIMA setup: {str(e)}")
+        return df

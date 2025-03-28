@@ -167,3 +167,4 @@ DS_Store
 outputs/*
 src/AIA/weights/*
 impl.py
+src/AIA/train/*

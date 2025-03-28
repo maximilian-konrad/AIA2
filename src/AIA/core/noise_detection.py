@@ -3,6 +3,7 @@ import numpy as np
 import math
 from scipy.signal import convolve2d
 from tqdm import tqdm
+import os
 
 def estimate_noise(self, df_images):
     """
@@ -21,19 +22,36 @@ def estimate_noise(self, df_images):
 
     # Iterate over all images using enumerate on the DataFrame column
     for idx, image_path in enumerate(tqdm(df_images['filename'])):
-         img = cv2.imread(image_path) 
-         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        try:
+            # Check if file exists
+            if not os.path.exists(image_path):
+                print(f"Warning: File not found: {image_path}")
+                continue
 
-         H, W = gray.shape
+            # Load the image using cv2
+            img = cv2.imread(image_path)
+            if img is None:
+                print(f"Warning: Failed to load image: {image_path}")
+                continue
 
-         M = [[1, -2, 1],
-         [-2, 4, -2],
-         [1, -2, 1]]
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-         sigma = np.sum(np.sum(np.absolute(convolve2d(gray, M))))
-         sigma = sigma * math.sqrt(0.5 * math.pi) / (6 * (W-2) * (H-2))
+            H, W = gray.shape
 
-         # Value more than 10 indicates a noisy image
-         df.loc[idx, 'noise']  = sigma
+            M = [[1, -2, 1],
+                 [-2, 4, -2],
+                 [1, -2, 1]]
+
+            sigma = np.sum(np.sum(np.absolute(convolve2d(gray, M))))
+            sigma = sigma * math.sqrt(0.5 * math.pi) / (6 * (W-2) * (H-2))
+
+            # Value more than 10 indicates a noisy image
+            df.loc[idx, 'noise'] = sigma
+
+        except Exception as e:
+            error = f"Error processing {image_path}: {str(e)}"
+            print(error)
+            df.loc[idx, 'error_noise_detection'] = error
+            continue
 
     return df

@@ -1,5 +1,6 @@
 import cv2
 from tqdm import tqdm
+import os
 
 def extract_blur_value(self, df_images):
     """
@@ -15,11 +16,27 @@ def extract_blur_value(self, df_images):
 
     # Iterate over all images using enumerate on the DataFrame column
     for idx, image_path in enumerate(tqdm(df_images['filename'])):
+        try:
+            # Check if file exists
+            if not os.path.exists(image_path):
+                print(f"Warning: File not found: {image_path}")
+                continue
 
-        image = cv2.imread(image_path)
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            # Load the image using cv2
+            image = cv2.imread(image_path)
+            if image is None:
+                print(f"Warning: Failed to load image: {image_path}")
+                continue
 
-        # Set threshold at 100. Value below 100 indicates a blurry image
-        df.loc[idx, 'blur'] = cv2.Laplacian(gray, cv2.CV_64F).var()
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+            # Set threshold at 100. Value below 100 indicates a blurry image
+            df.loc[idx, 'blur'] = cv2.Laplacian(gray, cv2.CV_64F).var()
+
+        except Exception as e:
+            error = f"Error processing {image_path}: {str(e)}"
+            print(error)
+            df.loc[idx, 'error_blur_detection'] = error
+            continue
 
     return df
