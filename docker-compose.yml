@@ -1,0 +1,13 @@
+version: "3"
+
+services:
+  aia-app:
+    build: .
+    ports:
+      - "5000:5000" # For web app
+      - "8888:8888" # For Jupyter notebook
+    volumes:
+      - ./outputs:/app/outputs
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: app # Use 'app' or 'notebook'
