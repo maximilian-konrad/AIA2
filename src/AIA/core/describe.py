@@ -144,6 +144,7 @@ def describe_llm(self, df_images, prompt="Describe the image."):
                         **inputs,
                         max_new_tokens=1000,
                         generation_config=generation_config,
+                        num_logits_to_keep=1
                     )
                     generate_ids = generate_ids[:, inputs['input_ids'].shape[1]:]
                     response = processor.batch_decode(
